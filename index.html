@@ -43,12 +43,19 @@
         </div>
 
         <!-- Extension not installed banner -->
-        <div id="noExtBanner" class="w-full max-w-2xl mb-6 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-5 py-4 flex items-center gap-4">
-            <i class="fa-solid fa-puzzle-piece text-2xl text-amber-500"></i>
-            <div>
-                <p class="font-semibold">Electro EZY Extension not detected</p>
-                <p class="text-sm mt-0.5">Install the Chrome extension to fetch live prices from all retailers.</p>
+        <div id="noExtBanner" class="w-full max-w-2xl mb-6 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-5 py-4 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+                <i class="fa-solid fa-puzzle-piece text-2xl text-amber-500"></i>
+                <div>
+                    <p class="font-semibold">Electro EZY Extension not detected</p>
+                    <p class="text-sm mt-0.5">Install the Chrome extension to fetch live prices from all retailers.</p>
+                </div>
             </div>
+            <a href="https://chromewebstore.google.com/detail/electro-ezy/oaokifhlejcnhdkfkcdmcgkifipbhnlm" 
+               target="_blank" rel="noopener noreferrer"
+               class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap">
+                Install Extension
+            </a>
         </div>
 
         <!-- Search Box -->
