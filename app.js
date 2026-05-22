@@ -20,7 +20,50 @@ const resultsTitle    = document.getElementById('resultsTitle');
 const resultsCount    = document.getElementById('resultsCount');
 const statusOverlay   = document.getElementById('statusOverlay');
 const statusContainer = document.getElementById('statusContainer');
+const statusContainer = document.getElementById('statusContainer');
 const noExtBanner     = document.getElementById('noExtBanner');
+
+// ─── Advanced search state ────────────────────────────────────────────────────
+const ALL_SITES = [
+    { id: 'quartz', name: 'Quartz' },
+    { id: 'robocraze', name: 'Robocraze' },
+    { id: 'thinkrobotics', name: 'ThinkRobotics' },
+    { id: 'evelta', name: 'Evelta' },
+    { id: 'sharvi', name: 'Sharvi' },
+    { id: 'ktron', name: 'Ktron' },
+    { id: 'robu', name: 'Robu' }
+];
+let selectedSites = JSON.parse(localStorage.getItem('electroezy_sites')) || ALL_SITES.map(s => s.id);
+
+// ─── Setup advanced search UI ─────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    const siteCheckboxes = document.getElementById('siteCheckboxes');
+    const advancedToggleBtn = document.getElementById('advancedToggleBtn');
+    const advancedPanel = document.getElementById('advancedPanel');
+
+    if (siteCheckboxes) {
+        ALL_SITES.forEach(site => {
+            const label = document.createElement('label');
+            label.className = 'flex items-center gap-2 text-sm text-slate-700 cursor-pointer select-none';
+            label.innerHTML = `
+                <input type="checkbox" value="${site.id}" class="site-cb w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2" ${selectedSites.includes(site.id) ? 'checked' : ''}>
+                ${site.name}
+            `;
+            siteCheckboxes.appendChild(label);
+        });
+
+        siteCheckboxes.addEventListener('change', () => {
+            selectedSites = Array.from(document.querySelectorAll('.site-cb:checked')).map(cb => cb.value);
+            localStorage.setItem('electroezy_sites', JSON.stringify(selectedSites));
+        });
+    }
+
+    if (advancedToggleBtn && advancedPanel) {
+        advancedToggleBtn.addEventListener('click', () => {
+            advancedPanel.classList.toggle('hidden');
+        });
+    }
+});
 
 // ─── Scroll buttons ───────────────────────────────────────────────────────────
 document.getElementById('scrollTopBtn').addEventListener('click', () =>
@@ -28,11 +71,23 @@ document.getElementById('scrollTopBtn').addEventListener('click', () =>
 document.getElementById('scrollBottomBtn').addEventListener('click', () =>
     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }));
 
-// ─── Extension detection ──────────────────────────────────────────────────────
-// Show banner if extension hasn't replied within 1.5 s
-const extDetectTimer = setTimeout(() => {
-    if (!extensionReady) noExtBanner.style.display = 'flex';
-}, 1500);
+// ─── Extension detection via ping-pong ───────────────────────────────────────
+// Ping every 400 ms. Content script replies with ELECTROEZY_READY.
+// Stops after 6 seconds and shows the "install extension" banner.
+let pingInterval = setInterval(() => {
+    window.postMessage({ type: 'ELECTROEZY_PING' }, '*');
+}, 400);
+
+setTimeout(() => {
+    if (!extensionReady) {
+        clearInterval(pingInterval);
+        noExtBanner.style.display = 'flex';
+    }
+}, 6000);
+
+// Send first ping immediately
+window.postMessage({ type: 'ELECTROEZY_PING' }, '*');
+
 
 // ─── WooCommerce HTML parser (runs in page, has DOMParser access) ─────────────
 const SITE_COLORS = {
@@ -45,37 +100,7 @@ const SITE_COLORS = {
     'Sharvi Electronics':'background:#e0e7ff; color:#3730a3;'
 };
 
-function parseWooHtml(htmlString, siteName, baseUrl) {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(htmlString, 'text/html');
-    const items = Array.from(
-        doc.querySelectorAll('ul.products li.product, .wd-products-grid .product-grid-item, .products-grid .product-grid-item, .products .product')
-    ).slice(0, 20);
-
-    return items.map(p => {
-        const titleEl = p.querySelector('.woocommerce-loop-product__title') || p.querySelector('h2') || p.querySelector('h3') || p.querySelector('.product-title');
-        const priceEl = p.querySelector('.price');
-        const imgEl   = p.querySelector('img');
-        const linkEl  = p.querySelector('a.woocommerce-LoopProduct-link') || p.querySelector('a');
-
-        const priceRaw = priceEl ? priceEl.textContent.trim() : '';
-        const priceMatches = [...priceRaw.matchAll(/[\d,]+\.?\d*/g)];
-        const lastMatch = priceMatches[priceMatches.length - 1];
-        const priceVal = lastMatch ? parseFloat(lastMatch[0].replace(/,/g, '')) : 0;
-
-        let link = linkEl ? linkEl.getAttribute('href') : '';
-        if (link && !link.startsWith('http')) link = (baseUrl || '') + link;
-
-        return {
-            site: siteName,
-            title: titleEl ? titleEl.textContent.trim() : 'Unknown',
-            price: priceVal,
-            price_str: priceVal > 0 ? `₹${priceVal.toFixed(2)}` : 'Check Price',
-            link,
-            image: imgEl ? (imgEl.getAttribute('data-src') || imgEl.getAttribute('src') || '') : ''
-        };
-    });
-}
+// Removed parseWooHtml as it's now in the extension (content.js)
 
 // ─── Card builder ─────────────────────────────────────────────────────────────
 function escapeHTML(str) {
@@ -160,8 +185,9 @@ window.addEventListener('message', (event) => {
 
     // Extension connected
     if (msg.type === 'ELECTROEZY_READY') {
+        if (extensionReady) return; // already connected
         extensionReady = true;
-        clearTimeout(extDetectTimer);
+        clearInterval(pingInterval);
         noExtBanner.style.display = 'none';
         searchInput.disabled = false;
         searchBtn.disabled = false;
@@ -180,19 +206,7 @@ window.addEventListener('message', (event) => {
         } else {
             badgeFail(msg.siteId, msg.siteName);
         }
-    }
-
-    if (msg.type === 'SITE_HTML') {
-        const results = parseWooHtml(msg.html, msg.siteName, msg.baseUrl);
-        if (results.length > 0) {
-            allResults = allResults.concat(results);
-            rerenderGrid();
-            loadingState.classList.add('hidden');
-            badgeSuccess(msg.siteId, msg.siteName);
-        } else {
-            badgeFail(msg.siteId, msg.siteName);
-        }
-    }
+    // SITE_HTML is now handled by content.js, so app.js only receives SITE_RESULT.
 
     if (msg.type === 'SITE_ERROR') {
         badgeFail(msg.siteId, msg.siteName);
@@ -233,13 +247,26 @@ searchForm.addEventListener('submit', (e) => {
     // Build status badges
     statusContainer.innerHTML = '';
     statusOverlay.style.display = 'block';
-    const SITES = ['quartz','robocraze','thinkrobotics','evelta','sharvi','ktron','robu'];
-    const SITE_NAMES = {
-        quartz: 'Quartz', robocraze: 'Robocraze', thinkrobotics: 'ThinkRobotics',
-        evelta: 'Evelta', sharvi: 'Sharvi', ktron: 'Ktron', robu: 'Robu'
-    };
-    SITES.forEach(id => makeBadge(id, SITE_NAMES[id]));
+    
+    if (selectedSites.length === 0) {
+        loadingState.classList.add('hidden');
+        resultsTitle.textContent = 'No Retailers Selected';
+        resultsCount.textContent = '0 products';
+        resultsGrid.innerHTML = `
+            <div class="col-span-full text-center py-16 bg-white rounded-2xl border border-slate-200">
+                <i class="fa-solid fa-triangle-exclamation text-5xl text-amber-300 mb-4"></i>
+                <p class="text-slate-500 text-lg">Please select at least one retailer in Advanced Search.</p>
+            </div>`;
+        resultsArea.classList.remove('hidden');
+        statusOverlay.style.display = 'none';
+        return;
+    }
+
+    selectedSites.forEach(id => {
+        const site = ALL_SITES.find(s => s.id === id);
+        if (site) makeBadge(id, site.name);
+    });
 
     // Fire!
-    window.postMessage({ type: 'ELECTROEZY_SEARCH', query, requestId: currentRequestId }, '*');
+    window.postMessage({ type: 'ELECTROEZY_SEARCH', query, requestId: currentRequestId, selectedSites }, '*');
 });
