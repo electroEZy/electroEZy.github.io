@@ -29,31 +29,8 @@
         /* No-extension banner */
         #noExtBanner { display: none; }
     </style>
-
-    <script>
-        // Check for mobile devices based on User-Agent
-        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-            document.addEventListener("DOMContentLoaded", function() {
-                var overlay = document.getElementById("mobileOverlay");
-                if (overlay) {
-                    overlay.classList.remove("hidden");
-                    overlay.classList.add("flex");
-                    document.body.style.overflow = "hidden"; // Lock scrolling
-                }
-            });
-        }
-    </script>
-
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col items-center py-10 pb-28">
-
-    <!-- Mobile Overlay -->
-    <div id="mobileOverlay" class="hidden fixed inset-0 z-[10000] bg-slate-900 flex-col items-center justify-center p-6 text-center">
-        <i class="fa-solid fa-desktop text-5xl text-blue-400 mb-6"></i>
-        <h2 class="text-2xl font-bold text-white mb-3">Desktop Optimized</h2>
-        <p class="text-slate-300 text-lg">Welcome! This site is optimized for desktop viewing. Please open it on a desktop device for the best experience.</p>
-    </div>
-
 
     <div class="w-full max-w-5xl px-4 flex flex-col items-center">
 
@@ -90,13 +67,25 @@
                     </div>
                     <input type="text" id="searchInput"
                         placeholder="Search a component, e.g. Arduino Uno R3" required
-                        class="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
-                        disabled>
+                        class="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg">
                 </div>
+                
+                <!-- Advanced Search Toggle -->
+                <div>
+                    <button type="button" id="advancedToggleBtn" class="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1 transition-colors">
+                        <i class="fa-solid fa-sliders text-xs"></i> Advanced Search
+                    </button>
+                    <div id="advancedPanel" class="hidden mt-3 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                        <p class="text-sm font-semibold text-slate-700 mb-2">Select retailers to search:</p>
+                        <div class="flex flex-wrap gap-3" id="siteCheckboxes">
+                            <!-- JS will populate checkboxes here -->
+                        </div>
+                    </div>
+                </div>
+
                 <div class="flex justify-end">
                     <button type="submit" id="searchBtn"
-                        class="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-8 py-2.5 rounded-lg font-semibold transition-colors shadow-sm flex items-center gap-2"
-                        disabled>
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-lg font-semibold transition-colors shadow-sm flex items-center gap-2">
                         <span>Search</span>
                         <i class="fa-solid fa-arrow-right"></i>
                     </button>
