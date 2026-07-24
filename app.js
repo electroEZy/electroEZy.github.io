@@ -20,28 +20,39 @@ const resultsTitle    = document.getElementById('resultsTitle');
 const resultsCount    = document.getElementById('resultsCount');
 const statusOverlay   = document.getElementById('statusOverlay');
 const statusContainer = document.getElementById('statusContainer');
-const statusContainer = document.getElementById('statusContainer');
 const noExtBanner     = document.getElementById('noExtBanner');
 
 // ─── Advanced search state ────────────────────────────────────────────────────
-const ALL_SITES = [
-    { id: 'quartz', name: 'Quartz' },
-    { id: 'robocraze', name: 'Robocraze' },
-    { id: 'thinkrobotics', name: 'ThinkRobotics' },
-    { id: 'evelta', name: 'Evelta' },
-    { id: 'sharvi', name: 'Sharvi' },
-    { id: 'ktron', name: 'Ktron' },
-    { id: 'robu', name: 'Robu' }
-];
-let selectedSites = JSON.parse(localStorage.getItem('electroezy_sites')) || ALL_SITES.map(s => s.id);
+let ALL_SITES = [];
+let selectedSites = [];
 
 // ─── Setup advanced search UI ─────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-    const siteCheckboxes = document.getElementById('siteCheckboxes');
     const advancedToggleBtn = document.getElementById('advancedToggleBtn');
     const advancedPanel = document.getElementById('advancedPanel');
 
+    if (advancedToggleBtn && advancedPanel) {
+        advancedToggleBtn.addEventListener('click', () => {
+            advancedPanel.classList.toggle('hidden');
+        });
+    }
+});
+
+function initSites(sitesData) {
+    if (!sitesData || sitesData.length === 0) return;
+    ALL_SITES = sitesData;
+    
+    // Load preference
+    const saved = JSON.parse(localStorage.getItem('electroezy_sites'));
+    if (saved && Array.isArray(saved)) {
+        selectedSites = saved;
+    } else {
+        selectedSites = ALL_SITES.map(s => s.id);
+    }
+
+    const siteCheckboxes = document.getElementById('siteCheckboxes');
     if (siteCheckboxes) {
+        siteCheckboxes.innerHTML = '';
         ALL_SITES.forEach(site => {
             const label = document.createElement('label');
             label.className = 'flex items-center gap-2 text-sm text-slate-700 cursor-pointer select-none';
@@ -55,15 +66,10 @@ document.addEventListener('DOMContentLoaded', () => {
         siteCheckboxes.addEventListener('change', () => {
             selectedSites = Array.from(document.querySelectorAll('.site-cb:checked')).map(cb => cb.value);
             localStorage.setItem('electroezy_sites', JSON.stringify(selectedSites));
+            rerenderGrid();
         });
     }
-
-    if (advancedToggleBtn && advancedPanel) {
-        advancedToggleBtn.addEventListener('click', () => {
-            advancedPanel.classList.toggle('hidden');
-        });
-    }
-});
+}
 
 // ─── Scroll buttons ───────────────────────────────────────────────────────────
 document.getElementById('scrollTopBtn').addEventListener('click', () =>
@@ -137,11 +143,23 @@ function buildCard(product, index) {
 // ─── Grid re-render ───────────────────────────────────────────────────────────
 function rerenderGrid() {
     resultsGrid.innerHTML = '';
-    const sorted = [...allResults].sort((a, b) => (a.price || 999999) - (b.price || 999999));
+    const filtered = allResults.filter(p => {
+        const siteInfo = ALL_SITES.find(s => s.name === p.site);
+        if (siteInfo) {
+            return selectedSites.includes(siteInfo.id);
+        }
+        return true;
+    });
+    const sorted = [...filtered].sort((a, b) => (a.price || 999999) - (b.price || 999999));
     sorted.forEach((p, i) => resultsGrid.appendChild(buildCard(p, i)));
     resultsTitle.textContent = 'All Results';
     resultsCount.textContent = `${sorted.length} products found`;
-    resultsArea.classList.remove('hidden');
+    
+    if (filtered.length > 0) {
+        resultsArea.classList.remove('hidden');
+    } else if (allResults.length > 0) {
+        resultsArea.classList.add('hidden');
+    }
 }
 
 // ─── Site status badge helpers ────────────────────────────────────────────────
@@ -185,13 +203,13 @@ window.addEventListener('message', (event) => {
 
     // Extension connected
     if (msg.type === 'ELECTROEZY_READY') {
+        if (!extensionReady && msg.sites) {
+            initSites(msg.sites);
+        }
         if (extensionReady) return; // already connected
         extensionReady = true;
         clearInterval(pingInterval);
         noExtBanner.style.display = 'none';
-        searchInput.disabled = false;
-        searchBtn.disabled = false;
-        searchInput.focus();
     }
 
     // Ignore stale searches
@@ -206,6 +224,7 @@ window.addEventListener('message', (event) => {
         } else {
             badgeFail(msg.siteId, msg.siteName);
         }
+    }
     // SITE_HTML is now handled by content.js, so app.js only receives SITE_RESULT.
 
     if (msg.type === 'SITE_ERROR') {
@@ -233,7 +252,7 @@ window.addEventListener('message', (event) => {
 searchForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const query = searchInput.value.trim();
-    if (!query || !extensionReady) return;
+    if (!query) return;
 
     // Reset state
     allResults = [];
