@@ -267,6 +267,21 @@ searchForm.addEventListener('submit', (e) => {
     statusContainer.innerHTML = '';
     statusOverlay.style.display = 'block';
     
+    if (!extensionReady) {
+        loadingState.classList.add('hidden');
+        resultsTitle.textContent = 'Extension Not Connected';
+        resultsCount.textContent = '';
+        resultsGrid.innerHTML = `
+            <div class="col-span-full text-center py-16 bg-white rounded-2xl border border-slate-200">
+                <i class="fa-solid fa-puzzle-piece text-5xl text-slate-200 mb-4"></i>
+                <p class="text-slate-400 text-lg">Waiting for the Electro EZY extension…</p>
+                <p class="text-slate-400 text-sm mt-2">Make sure the extension is installed and try again.</p>
+            </div>`;
+        resultsArea.classList.remove('hidden');
+        statusOverlay.style.display = 'none';
+        return;
+    }
+
     if (selectedSites.length === 0) {
         loadingState.classList.add('hidden');
         resultsTitle.textContent = 'No Retailers Selected';
