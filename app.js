@@ -103,7 +103,9 @@ const SITE_COLORS = {
     'Quartz Components': 'background:#f3e8ff; color:#6b21a8;',
     'Robocraze':         'background:#ffedd5; color:#9a3412;',
     'ThinkRobotics':     'background:#ccfbf1; color:#115e59;',
-    'Sharvi Electronics':'background:#e0e7ff; color:#3730a3;'
+    'Sharvi Electronics':'background:#e0e7ff; color:#3730a3;',
+    'MakerBazar':        'background:#d1fae5; color:#065f46;',
+    'Hubtronics':        'background:#e0f2fe; color:#0369a1;'
 };
 
 // Removed parseWooHtml as it's now in the extension (content.js)
@@ -116,11 +118,16 @@ function escapeHTML(str) {
 
 function buildCard(product, index) {
     const colorStyle = SITE_COLORS[product.site] || 'background:#f1f5f9; color:#334155;';
-    const defaultImg = 'https://via.placeholder.com/300x300?text=No+Image';
+    const defaultImg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'><rect width='300' height='300' fill='%23f8fafc'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' font-weight='500' fill='%2394a3b8'>No Image</text></svg>";
     const card = document.createElement('div');
     card.className = 'product-card card-appear bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm flex flex-col';
+    const outOfStockBadge = product.in_stock === false 
+        ? `<div style="position:absolute;top:10px;left:10px;background:#ef4444;color:#fff;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,0.2);z-index:10;">Out of Stock</div>`
+        : '';
+
     card.innerHTML = `
         <div class="relative bg-white pt-4 px-4 h-48 flex items-center justify-center border-b border-slate-100">
+            ${outOfStockBadge}
             <div style="position:absolute;top:10px;right:10px;background:#1e293b;color:#fff;font-size:11px;font-weight:700;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);">#${index + 1}</div>
             <img src="${escapeHTML(product.image || defaultImg)}" alt="${escapeHTML(product.title)}"
                  style="max-height:100%;max-width:100%;object-fit:contain;padding:8px;"
@@ -130,7 +137,7 @@ function buildCard(product, index) {
         <div class="p-5 flex flex-col flex-grow">
             <h3 class="font-semibold text-slate-800 text-base mb-3 leading-snug flex-grow line-clamp-2" title="${escapeHTML(product.title)}">${escapeHTML(product.title)}</h3>
             <div class="flex items-center justify-between mt-2">
-                <span class="text-2xl font-bold text-slate-900">${escapeHTML(product.price > 0 ? `₹${product.price.toFixed(2)}` : product.price_str)}</span>
+                <span class="text-2xl font-bold text-slate-900 ${product.in_stock === false ? 'line-through text-slate-400' : ''}">${escapeHTML(product.price > 0 ? `₹${product.price.toFixed(2)}` : product.price_str)}</span>
                 <a href="${escapeHTML(product.link)}" target="_blank" rel="noopener noreferrer"
                    class="bg-blue-50 hover:bg-blue-100 text-blue-700 p-2.5 rounded-lg transition-colors" title="View on store">
                     <i class="fa-solid fa-arrow-up-right-from-square"></i>
