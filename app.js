@@ -130,6 +130,7 @@ function buildCard(product, index) {
             ${outOfStockBadge}
             <div style="position:absolute;top:10px;right:10px;background:#1e293b;color:#fff;font-size:11px;font-weight:700;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);">#${index + 1}</div>
             <img src="${escapeHTML(product.image || defaultImg)}" alt="${escapeHTML(product.title)}"
+                 referrerpolicy="no-referrer"
                  style="max-height:100%;max-width:100%;object-fit:contain;padding:8px;"
                  onerror="this.src='${defaultImg}'">
             <span style="position:absolute;bottom:10px;left:10px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;${colorStyle}">${escapeHTML(product.site)}</span>
