@@ -928,7 +928,7 @@
         <!-- Review & Adjustment Controls (After Capture) -->
         <div class="btn-row" style="margin-top: 10px; display: none;" id="reviewButtons">
           <button class="btn btn-primary" onclick="extractFromWarpedCanvas()">✨ Extract From Corners</button>
-          <button class="btn btn-secondary" onclick="autoDetectPhoneScreen()" title="Automatically detect high-contrast phone screen">🎯 Auto-Fit Screen</button>
+          <button class="btn btn-secondary" onclick="autoDetectPhoneScreen(true)" title="Auto-detect grid and extract puzzle colors">🎯 Auto-Detect Grid</button>
           <button class="btn btn-secondary" onclick="retakePhoto()">📷 Retake</button>
         </div>
       </div>
@@ -950,11 +950,12 @@
       <div id="presetsSection" style="display: block;">
         <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">Try instant pre-built verified Meowdoku puzzles:</div>
         <div class="presets-row">
-          <button class="chip-btn" onclick="loadPreset('sample6x6')">🌸 6×6 Pastel Meadow</button>
-          <button class="chip-btn" onclick="loadPreset('sample7x7')">🌈 7×7 Rainbow Valley</button>
-          <button class="chip-btn" onclick="loadPreset('sample8x8')">👑 8×8 Classic Queens</button>
-          <button class="chip-btn" onclick="loadPreset('sample9x9')">🏰 9×9 Royal Palace</button>
-          <button class="chip-btn" onclick="loadPreset('sample10x10')">🐱 10×10 Cat Kingdom</button>
+          <button class="chip-btn" onclick="loadPreset('sample10x10Level59')">👑 Level 59 (10×10)</button>
+          <button class="chip-btn" onclick="loadPreset('sample6x6')">🌸 6×6 Meadow</button>
+          <button class="chip-btn" onclick="loadPreset('sample7x7')">🌈 7×7 Rainbow</button>
+          <button class="chip-btn" onclick="loadPreset('sample8x8')">👑 8×8 Queens</button>
+          <button class="chip-btn" onclick="loadPreset('sample9x9')">🏰 9×9 Palace</button>
+          <button class="chip-btn" onclick="loadPreset('sample10x10')">🐱 10×10 Kingdom</button>
         </div>
       </div>
 
@@ -1142,6 +1143,8 @@
       '#E8BD0D'  // Gold Ochre
     ];
 
+    let currentPalette = [...DISTINCT_PALETTE];
+
     // State Variables
     let N = 8;
     let gridRegions = [];
@@ -1260,8 +1263,11 @@
        GRID SETUP & RENDERING
        =================================================================== */
 
-    function initGrid(size) {
+    function initGrid(size, resetPalette = true) {
       N = size;
+      if (resetPalette) {
+        currentPalette = [...DISTINCT_PALETTE];
+      }
       gridRegions = [];
       catPlacements = [];
       for (let r = 0; r < N; r++) {
@@ -1280,7 +1286,7 @@
 
     function changeGridSize(newSize) {
       if (newSize < 4 || newSize > 12) return;
-      initGrid(newSize);
+      initGrid(newSize, true);
       setStatus(`Grid resized to ${newSize} × ${newSize}. Paint regions or scan with camera!`, 'info');
     }
 
@@ -1291,7 +1297,7 @@
         const swatch = document.createElement('div');
         const isActive = (i === activePaletteColor);
         swatch.className = `color-swatch ${isActive ? 'active' : ''}`;
-        swatch.style.backgroundColor = DISTINCT_PALETTE[i % DISTINCT_PALETTE.length];
+        swatch.style.backgroundColor = currentPalette[i % currentPalette.length];
         swatch.textContent = (i + 1);
         swatch.title = `Color Region ${i + 1} (Click to highlight on grid & paint)`;
         swatch.onclick = () => {
@@ -1316,7 +1322,7 @@
           cell.className = 'cell';
           cell.dataset.row = r;
           cell.dataset.col = c;
-          cell.style.backgroundColor = DISTINCT_PALETTE[region % DISTINCT_PALETTE.length];
+          cell.style.backgroundColor = currentPalette[region % currentPalette.length];
 
           // Highlight selected color region on grid
           if (region === activePaletteColor) {
@@ -1738,11 +1744,8 @@
       document.getElementById('reviewButtons').style.display = 'flex';
       document.getElementById('cornersContainer').style.display = 'block';
 
-      // Attempt auto-detection of the phone screen or set default corners
-      autoDetectPhoneScreen();
-      renderCornerHandles();
-      drawCornerOverlay();
-      setStatus('Adjust the 4 corner pins on the 4 corners of your puzzle grid, then click "Extract From Corners"!', 'info');
+      // Smart auto-detection of Meowdoku grid from phone screenshot / camera frame & auto-extract
+      autoDetectPhoneScreen(true);
     }
 
     function retakePhoto() {
@@ -1757,83 +1760,273 @@
     }
 
     /* ===================================================================
-       SMART AUTO-DETECTION OF PHONE SCREEN / BRIGHT GRID
+       SMART CHROMATIC AUTO-DETECTION OF MEOWDOKU GRID
        =================================================================== */
 
-    function autoDetectPhoneScreen() {
+    function getPixelSat(r, g, b) {
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      return max === 0 ? 0 : (max - min) / max;
+    }
+
+    function toHex(r, g, b) {
+      return '#' + [r, g, b].map(x => {
+        const h = Math.max(0, Math.min(255, Math.round(x))).toString(16);
+        return h.length === 1 ? '0' + h : h;
+      }).join('');
+    }
+
+    function autoDetectPhoneScreen(autoExtract = true) {
       const w = rawStaticCanvas.width;
       const h = rawStaticCanvas.height;
       if (!w || !h) return;
 
-      const ctx = rawStaticCanvas.getContext('2d');
-      // Downsample for fast screen thresholding
-      const dw = 120;
-      const dh = Math.floor(120 * (h / w));
+      // Downsample for high-speed chromatic projection
+      const scale = Math.min(1.0, 480 / Math.max(w, h));
+      const dw = Math.max(100, Math.round(w * scale));
+      const dh = Math.max(100, Math.round(h * scale));
+
       const tempCanvas = document.createElement('canvas');
       tempCanvas.width = dw;
       tempCanvas.height = dh;
       const tempCtx = tempCanvas.getContext('2d');
       tempCtx.drawImage(rawStaticCanvas, 0, 0, dw, dh);
-
       const imgData = tempCtx.getImageData(0, 0, dw, dh).data;
-      let totalLum = 0;
-      const lumGrid = new Float32Array(dw * dh);
 
-      for (let i = 0; i < dw * dh; i++) {
-        const r = imgData[i * 4];
-        const g = imgData[i * 4 + 1];
-        const b = imgData[i * 4 + 2];
-        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-        lumGrid[i] = lum;
-        totalLum += lum;
+      // 1. Horizontal color projection: find rows with colored puzzle tiles
+      const rowColored = new Float32Array(dh);
+      for (let y = 0; y < dh; y++) {
+        let count = 0;
+        for (let x = 0; x < dw; x++) {
+          const idx = (y * dw + x) * 4;
+          const r = imgData[idx], g = imgData[idx + 1], b = imgData[idx + 2];
+          const sat = getPixelSat(r, g, b);
+          const lum = (r + g + b) / 3;
+          // Colored tiles in Meowdoku have distinct saturation and are not pure white/black background
+          if (sat > 0.16 && lum > 35 && lum < 248) {
+            count++;
+          }
+        }
+        rowColored[y] = count;
       }
 
-      const avgLum = totalLum / (dw * dh);
-      const threshold = Math.max(60, avgLum * 1.15); // Phone screen is brighter than ambient
-
-      let minX = dw, maxX = 0, minY = dh, maxY = 0;
-      let count = 0;
-
+      // An active row has colored tiles spanning at least 18% of the width
+      const isRowActive = new Uint8Array(dh);
       for (let y = 0; y < dh; y++) {
+        if (rowColored[y] > dw * 0.18) isRowActive[y] = 1;
+      }
+
+      // Morphological closing to bridge gaps between tiles or thin separator lines
+      const maxGap = Math.max(8, Math.floor(dh * 0.04));
+      const closedRows = new Uint8Array(isRowActive);
+      for (let y = 0; y < dh; y++) {
+        if (!closedRows[y]) {
+          let hasBefore = false, hasAfter = false;
+          for (let k = 1; k <= maxGap && y - k >= 0; k++) {
+            if (isRowActive[y - k]) { hasBefore = true; break; }
+          }
+          for (let k = 1; k <= maxGap && y + k < dh; k++) {
+            if (isRowActive[y + k]) { hasAfter = true; break; }
+          }
+          if (hasBefore && hasAfter) closedRows[y] = 1;
+        }
+      }
+
+      // Find the longest contiguous span of active rows
+      let bestLen = 0, bestY1 = 0, bestY2 = 0, curY1 = -1;
+      for (let y = 0; y < dh; y++) {
+        if (closedRows[y]) {
+          if (curY1 === -1) curY1 = y;
+        } else {
+          if (curY1 !== -1) {
+            const len = y - curY1;
+            if (len > bestLen) { bestLen = len; bestY1 = curY1; bestY2 = y - 1; }
+            curY1 = -1;
+          }
+        }
+      }
+      if (curY1 !== -1 && (dh - curY1) > bestLen) {
+        bestLen = dh - curY1; bestY1 = curY1; bestY2 = dh - 1;
+      }
+
+      // 2. Vertical color projection within [bestY1, bestY2]
+      const colColored = new Float32Array(dw);
+      for (let y = bestY1; y <= bestY2; y++) {
         for (let x = 0; x < dw; x++) {
-          if (lumGrid[y * dw + x] > threshold) {
-            if (x < minX) minX = x;
-            if (x > maxX) maxX = x;
-            if (y < minY) minY = y;
-            if (y > maxY) maxY = y;
-            count++;
+          const idx = (y * dw + x) * 4;
+          const r = imgData[idx], g = imgData[idx + 1], b = imgData[idx + 2];
+          const sat = getPixelSat(r, g, b);
+          const lum = (r + g + b) / 3;
+          if (sat > 0.16 && lum > 35 && lum < 248) {
+            colColored[x]++;
           }
         }
       }
 
-      // If a distinct bright phone screen rectangle was found (> 10% and < 90% of frame)
-      if (count > (dw * dh * 0.08) && (maxX - minX) > dw * 0.25 && (maxY - minY) > dh * 0.25) {
-        const padX = (maxX - minX) * 0.03;
-        const padY = (maxY - minY) * 0.03;
-        const x1 = Math.max(0.05, (minX + padX) / dw);
-        const x2 = Math.min(0.95, (maxX - padX) / dw);
-        const y1 = Math.max(0.05, (minY + padY) / dh);
-        const y2 = Math.min(0.95, (maxY - padY) / dh);
+      const activeHeight = bestY2 - bestY1 + 1;
+      let bestX1 = -1, bestX2 = -1;
+      for (let x = 0; x < dw; x++) {
+        if (colColored[x] > activeHeight * 0.18) {
+          if (bestX1 === -1) bestX1 = x;
+          bestX2 = x;
+        }
+      }
 
-        cornerPoints = [
-          { x: x1, y: y1 },
-          { x: x2, y: y1 },
-          { x: x2, y: y2 },
-          { x: x1, y: y2 }
-        ];
-        setStatus('Auto-fitted to detected phone screen! Fine-tune corners if needed.', 'ready');
-      } else {
-        // Default standard square centered
-        cornerPoints = [
-          { x: 0.15, y: 0.15 },
-          { x: 0.85, y: 0.15 },
-          { x: 0.85, y: 0.85 },
-          { x: 0.15, y: 0.85 }
-        ];
+      // Check if a valid grid area was found
+      let detected = false;
+      let normX1 = 0.15, normX2 = 0.85, normY1 = 0.15, normY2 = 0.85;
+
+      if (bestLen > dh * 0.15 && (bestX2 - bestX1) > dw * 0.20) {
+        normX1 = Math.max(0.005, bestX1 / dw);
+        normX2 = Math.min(0.995, (bestX2 + 1) / dw);
+        normY1 = Math.max(0.005, bestY1 / dh);
+        normY2 = Math.min(0.995, (bestY2 + 1) / dh);
+        detected = true;
+      }
+
+      cornerPoints = [
+        { x: normX1, y: normY1 }, // TL
+        { x: normX2, y: normY1 }, // TR
+        { x: normX2, y: normY2 }, // BR
+        { x: normX1, y: normY2 }  // BL
+      ];
+
+      // 3. Grid dimension N detection
+      if (detected) {
+        const detectedN = detectGridDimension(normX1, normY1, normX2, normY2);
+        if (detectedN >= 5 && detectedN <= 12) {
+          N = detectedN;
+          const sizeSelect = document.getElementById('gridSize');
+          if (sizeSelect) sizeSelect.value = N;
+          initGrid(N, false);
+        }
       }
 
       renderCornerHandles();
       drawCornerOverlay();
+
+      if (detected) {
+        setStatus(`Auto-detected ${N}×${N} Meowdoku grid! Extracting colors...`, 'ready');
+        if (autoExtract) {
+          setTimeout(() => {
+            extractFromWarpedCanvas();
+          }, 80);
+        }
+      } else {
+        setStatus('Could not automatically isolate grid. Please drag the 4 corner pins to the corners of your puzzle grid, then click "Extract From Corners"!', 'info');
+      }
+    }
+
+    function detectGridDimension(x1Norm, y1Norm, x2Norm, y2Norm) {
+      const w = rawStaticCanvas.width;
+      const h = rawStaticCanvas.height;
+      const x1 = Math.floor(x1Norm * w);
+      const x2 = Math.floor(x2Norm * w);
+      const y1 = Math.floor(y1Norm * h);
+      const y2 = Math.floor(y2Norm * h);
+      const gridW = x2 - x1;
+      const gridH = y2 - y1;
+      if (gridW <= 20 || gridH <= 20) return N;
+
+      const ctx = rawStaticCanvas.getContext('2d');
+      const imgData = ctx.getImageData(x1, y1, gridW, gridH).data;
+
+      // Vertical white divider lines
+      const whiteCols = new Float32Array(gridW);
+      for (let y = 0; y < gridH; y++) {
+        for (let x = 0; x < gridW; x++) {
+          const idx = (y * gridW + x) * 4;
+          const r = imgData[idx], g = imgData[idx + 1], b = imgData[idx + 2];
+          const sat = getPixelSat(r, g, b);
+          const lum = (r + g + b) / 3;
+          if (lum > 220 && sat < 0.15) {
+            whiteCols[x]++;
+          }
+        }
+      }
+
+      const minSpacing = gridW / 14;
+      const peaksX = [];
+      for (let i = 2; i < gridW - 2; i++) {
+        if (whiteCols[i] > gridH * 0.40 &&
+            whiteCols[i] >= whiteCols[i - 1] && whiteCols[i] >= whiteCols[i + 1] &&
+            whiteCols[i] >= whiteCols[i - 2] && whiteCols[i] >= whiteCols[i + 2]) {
+          if (peaksX.length === 0 || (i - peaksX[peaksX.length - 1]) > minSpacing) {
+            peaksX.push(i);
+          }
+        }
+      }
+
+      if (peaksX.length >= 4 && peaksX.length <= 11) {
+        return peaksX.length + 1;
+      }
+
+      // Horizontal white divider lines check as second confirmation
+      const whiteRows = new Float32Array(gridH);
+      for (let y = 0; y < gridH; y++) {
+        for (let x = 0; x < gridW; x++) {
+          const idx = (y * gridW + x) * 4;
+          const r = imgData[idx], g = imgData[idx + 1], b = imgData[idx + 2];
+          const sat = getPixelSat(r, g, b);
+          const lum = (r + g + b) / 3;
+          if (lum > 220 && sat < 0.15) {
+            whiteRows[y]++;
+          }
+        }
+      }
+
+      const peaksY = [];
+      for (let i = 2; i < gridH - 2; i++) {
+        if (whiteRows[i] > gridW * 0.40 &&
+            whiteRows[i] >= whiteRows[i - 1] && whiteRows[i] >= whiteRows[i + 1] &&
+            whiteRows[i] >= whiteRows[i - 2] && whiteRows[i] >= whiteRows[i + 2]) {
+          if (peaksY.length === 0 || (i - peaksY[peaksY.length - 1]) > minSpacing) {
+            peaksY.push(i);
+          }
+        }
+      }
+
+      if (peaksY.length >= 4 && peaksY.length <= 11) {
+        return peaksY.length + 1;
+      }
+
+      // Edge periodic energy test fallback
+      const colEdges = new Float32Array(gridW);
+      const stepY = Math.max(1, Math.floor(gridH / 30));
+      for (let y = 0; y < gridH; y += stepY) {
+        for (let x = 1; x < gridW; x++) {
+          const idx = (y * gridW + x) * 4;
+          const prevIdx = (y * gridW + (x - 1)) * 4;
+          const dr = imgData[idx] - imgData[prevIdx];
+          const dg = imgData[idx + 1] - imgData[prevIdx + 1];
+          const db = imgData[idx + 2] - imgData[prevIdx + 2];
+          const grad = Math.abs(dr) + Math.abs(dg) + Math.abs(db);
+          if (grad > 40) colEdges[x] += grad;
+        }
+      }
+
+      let bestN = N, bestScore = -1;
+      for (let n = 5; n <= 12; n++) {
+        const period = gridW / n;
+        let score = 0;
+        for (let k = 1; k < n; k++) {
+          const targetX = Math.round(k * period);
+          let localMax = 0;
+          for (let dx = -2; dx <= 2; dx++) {
+            const px = targetX + dx;
+            if (px >= 0 && px < gridW && colEdges[px] > localMax) {
+              localMax = colEdges[px];
+            }
+          }
+          score += localMax;
+        }
+        const normalized = score / (n - 1);
+        if (normalized > bestScore) {
+          bestScore = normalized;
+          bestN = n;
+        }
+      }
+
+      return bestN;
     }
 
     /* ===================================================================
@@ -2000,7 +2193,7 @@
 
     function extractFromWarpedCanvas() {
       if (rawStaticCanvas.width === 0) return;
-      setStatus('Sampling phone screen cells with anti-glare filtering...', 'info');
+      setStatus(`Sampling ${N}×${N} cells with anti-glare filtering...`, 'info');
 
       const w = rawStaticCanvas.width;
       const h = rawStaticCanvas.height;
@@ -2019,25 +2212,24 @@
           const vCenter = (r + 0.5) / N;
           const pt = quadBilinear(p0, p1, p2, p3, uCenter, vCenter);
 
-          // Sample an 8x8 patch around the cell center to avoid grid borders
-          const sampleSize = Math.max(4, Math.floor(Math.min(w, h) / (N * 5)));
-          const sx = Math.max(0, Math.min(w - sampleSize, Math.floor(pt.x - sampleSize / 2)));
-          const sy = Math.max(0, Math.min(h - sampleSize, Math.floor(pt.y - sampleSize / 2)));
-          const data = ctx.getImageData(sx, sy, sampleSize, sampleSize).data;
+          // Sample an interior patch around the cell center to avoid grid borders & dividers
+          const sampleRadius = Math.max(2, Math.floor(Math.min(w, h) / (N * 6)));
+          const sx = Math.max(0, Math.min(w - (sampleRadius * 2 + 1), Math.floor(pt.x - sampleRadius)));
+          const sy = Math.max(0, Math.min(h - (sampleRadius * 2 + 1), Math.floor(pt.y - sampleRadius)));
+          const patchSize = sampleRadius * 2 + 1;
+          const data = ctx.getImageData(sx, sy, patchSize, patchSize).data;
 
           // Anti-Glare & Border Rejection:
-          // Ignore blown-out white glare spots on the glass (> 242)
-          // and black boundary lines (< 28)
+          // Ignore blown-out white glare spots on the glass (> 248) and black lines (< 28)
           const validPixels = [];
           for (let p = 0; p < data.length; p += 4) {
             const pr = data[p], pg = data[p + 1], pb = data[p + 2];
             const b = (pr + pg + pb) / 3;
-            if (b > 28 && b < 242) {
+            if (b > 28 && b < 248) {
               validPixels.push([pr, pg, pb]);
             }
           }
 
-          // If too many glare reflections, fallback to median of all pixels
           const pixelsToUse = validPixels.length >= 4 ? validPixels : [];
           if (pixelsToUse.length === 0) {
             for (let p = 0; p < data.length; p += 4) {
@@ -2045,7 +2237,7 @@
             }
           }
 
-          // Compute median RGB to resist any moire striping on the screen
+          // Compute median RGB to resist any moire striping or noise on the screen
           const sortedR = pixelsToUse.map(px => px[0]).sort((a,b) => a - b);
           const sortedG = pixelsToUse.map(px => px[1]).sort((a,b) => a - b);
           const sortedB = pixelsToUse.map(px => px[2]).sort((a,b) => a - b);
@@ -2058,8 +2250,12 @@
         }
       }
 
-      // K-Means clustering into N color regions
-      const clusters = runKMeans(cellSamples.map(s => s.rgb), N, 35);
+      // Adaptive Color Clustering into N regions
+      const rawPoints = cellSamples.map(s => s.rgb);
+      const clusters = runColorClustering(rawPoints, N);
+
+      // Store true sampled hex colors in currentPalette so the solver UI matches the phone game!
+      currentPalette = clusters.centroids.map(c => toHex(c[0], c[1], c[2]));
 
       // Assign to grid
       for (let i = 0; i < cellSamples.length; i++) {
@@ -2071,7 +2267,14 @@
       renderBoard();
       updateRegionBadge();
       playMeowSound(true);
-      setStatus(`Captured phone screen into ${N} color regions! Tap any cell if you want to touch up, then hit Solve!`, 'ready');
+
+      const distinctCount = new Set(clusters.assignments).size;
+      if (distinctCount === N) {
+        setStatus(`Purr-fect! Detected all ${N} distinct color regions from your phone! Click "🐾 Solve Meowdoku!" below.`, 'ready');
+      } else {
+        setStatus(`Detected ${distinctCount} / ${N} colors. You can tap palette swatches to touch up any cells before solving!`, 'info');
+      }
+
       if (window.innerWidth < 860) {
         switchMobileSection('board');
       }
@@ -2084,19 +2287,37 @@
       return dr * dr + dg * dg + db * db;
     }
 
-    function runKMeans(points, k, maxIter = 25) {
+    function runColorClustering(points, k) {
       if (points.length === 0) return { assignments: [], centroids: [] };
 
-      const centroids = [];
-      centroids.push([...points[Math.floor(Math.random() * points.length)]]);
+      // Deterministic distance-based seed initialization
+      let distThreshold = 700;
+      let seeds = [];
 
-      while (centroids.length < k) {
-        let maxD = -1;
-        let bestCandidate = points[0];
+      while (distThreshold >= 150) {
+        seeds = [];
         for (const pt of points) {
           let minD = Infinity;
-          for (const c of centroids) {
-            const d = colorDistSq(pt, c);
+          for (const s of seeds) {
+            const d = colorDistSq(pt, s);
+            if (d < minD) minD = d;
+          }
+          if (minD > distThreshold) {
+            seeds.push([...pt]);
+            if (seeds.length === k) break;
+          }
+        }
+        if (seeds.length === k) break;
+        distThreshold -= 75;
+      }
+
+      // If still fewer than k seeds, fill with farthest remaining points (K-Means++)
+      while (seeds.length < k) {
+        let maxD = -1, bestCandidate = points[0];
+        for (const pt of points) {
+          let minD = Infinity;
+          for (const s of seeds) {
+            const d = colorDistSq(pt, s);
             if (d < minD) minD = d;
           }
           if (minD > maxD) {
@@ -2104,17 +2325,18 @@
             bestCandidate = pt;
           }
         }
-        centroids.push([...bestCandidate]);
+        seeds.push([...bestCandidate]);
       }
 
+      let centroids = seeds.map(s => [...s]);
       let assignments = new Array(points.length).fill(0);
 
-      for (let iter = 0; iter < maxIter; iter++) {
+      // K-Means convergence
+      for (let iter = 0; iter < 25; iter++) {
         let changed = false;
 
         for (let i = 0; i < points.length; i++) {
-          let bestCluster = 0;
-          let bestDist = Infinity;
+          let bestCluster = 0, bestDist = Infinity;
           for (let c = 0; c < k; c++) {
             const dist = colorDistSq(points[i], centroids[c]);
             if (dist < bestDist) {
@@ -2143,9 +2365,9 @@
 
         for (let c = 0; c < k; c++) {
           if (counts[c] > 0) {
-            centroids[c][0] = sums[c][0] / counts[c];
-            centroids[c][1] = sums[c][1] / counts[c];
-            centroids[c][2] = sums[c][2] / counts[c];
+            centroids[c][0] = Math.round(sums[c][0] / counts[c]);
+            centroids[c][1] = Math.round(sums[c][1] / counts[c]);
+            centroids[c][2] = Math.round(sums[c][2] / counts[c]);
           }
         }
       }
@@ -2293,6 +2515,22 @@
           [6, 6, 6, 8, 8, 8, 8, 7, 7]
         ]
       },
+      sample10x10Level59: {
+        n: 10,
+        palette: ['#eb86b7', '#9879d6', '#aed995', '#d57475', '#6cbce7', '#4ab5b2', '#ffab6e', '#e4bb4b', '#fab4d0', '#5c76b2'],
+        grid: [
+          [0,1,2,2,3,3,3,3,3,4],
+          [0,1,1,1,3,3,0,0,0,4],
+          [0,0,0,1,1,0,0,4,4,4],
+          [0,5,0,0,0,0,6,6,4,4],
+          [0,5,5,5,5,6,6,6,6,4],
+          [7,7,5,5,6,6,6,6,8,4],
+          [7,7,9,5,6,9,6,6,6,4],
+          [7,7,9,5,9,9,9,6,4,4],
+          [9,7,9,9,9,9,9,6,4,4],
+          [9,9,9,9,6,6,6,6,6,4]
+        ]
+      },
       sample10x10: {
         n: 10,
         grid: [
@@ -2315,13 +2553,18 @@
       if (!p) return;
       document.getElementById('gridSize').value = p.n;
       N = p.n;
+      if (p.palette) {
+        currentPalette = [...p.palette];
+      } else {
+        currentPalette = [...DISTINCT_PALETTE];
+      }
       gridRegions = JSON.parse(JSON.stringify(p.grid));
       catPlacements = Array.from({ length: N }, () => new Array(N).fill(false));
       updateViewfinderGridLines();
       renderPalette();
       renderBoard();
       updateRegionBadge();
-      setStatus(`Loaded ${p.n}×${p.n} preset! Click "Solve Meowdoku" to find solution.`, 'info');
+      setStatus(`Loaded ${p.n}×${p.n} preset! Click "🐾 Solve Meowdoku!" to find solution.`, 'info');
       if (window.innerWidth < 860) {
         switchMobileSection('board');
       }
@@ -2336,11 +2579,10 @@
         "3. Every COLORED REGION must have exactly ONE cat 🎨\n" +
         "4. NO TWO CATS CAN TOUCH: cats cannot be placed in any of the 8 surrounding boxes (orthogonal or diagonal neighbors)!\n\n" +
         "HOW TO SCAN A PHONE SCREEN:\n" +
-        "- Point camera at your phone displaying Meowdoku.\n" +
-        "- Click 'Snap Phone Screen'.\n" +
-        "- Click 'Auto-Fit Screen' or drag the 4 corner pins with the built-in magnifying glass to frame the grid.\n" +
-        "- Click 'Extract From Corners' to automatically detect the colors.\n" +
-        "- Click 'Solve Meowdoku!' to watch the peaceful cats placed instantly!"
+        "- Point camera at your phone displaying Meowdoku, or upload/paste a screenshot.\n" +
+        "- The app automatically detects the grid borders, grid size (N×N), and extracts puzzle colors instantly!\n" +
+        "- You can click 'Auto-Detect Grid' anytime or fine-tune corners with the magnifying loupe.\n" +
+        "- Click 'Solve Meowdoku!' to watch the peaceful cats placed instantly with zero touches!"
       );
     }
 
