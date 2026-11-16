@@ -894,8 +894,8 @@
       <div class="input-tabs">
         <button class="tab-btn active" id="tabPresets" onclick="switchInputMode('presets')">🧩 Presets</button>
         <button class="tab-btn" id="tabCam" onclick="switchInputMode('camera')">📷 Camera Scan</button>
-        <button class="tab-btn" id="tabDirectScreen" onclick="captureDirectScreen()">📱 Screen Share</button>
-        <button class="tab-btn" id="tabUpload" onclick="switchInputMode('upload')">📁 Screenshot / Paste</button>
+        <button class="tab-btn" id="tabDirectScreen" onclick="captureDirectScreen()">📱 Screen / Screenshot</button>
+        <button class="tab-btn" id="tabUpload" onclick="switchInputMode('upload')">📁 Upload / Paste</button>
       </div>
 
       <!-- Camera Feed & Captured Frame Display (Only activated when user clicks Camera Scan) -->
@@ -939,8 +939,9 @@
           <svg viewBox="0 0 24 24">
             <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
           </svg>
-          <div style="font-weight: 700; font-size: 0.95rem;">Upload or Paste Phone Screenshot</div>
-          <div style="font-size: 0.78rem; color: var(--text-muted);">Take a screenshot on your phone and drop it here, or press <strong>Ctrl + V</strong></div>
+          <div style="font-weight: 700; font-size: 0.95rem;">📱 Tap to Pick Phone Screenshot</div>
+          <div style="font-size: 0.78rem; color: var(--text-muted);">Takes 1 tap: opens your recent screenshots & photos!</div>
+          <button class="btn btn-primary" style="margin-top: 6px; pointer-events: none; max-width: 240px;">📂 Select from Photos</button>
           <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
         </div>
       </div>
@@ -1642,33 +1643,61 @@
       setupCamera();
     }
 
-    // Direct Screen Capture (Share screen / window)
+    // Direct Screen Capture with smooth Android / Mobile fallback
     async function captureDirectScreen() {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-        alert('Direct screen capture is not supported on this browser/device. Pointing your camera or uploading a screenshot works everywhere!');
-        return;
+      const hasDisplayMedia = navigator.mediaDevices && typeof navigator.mediaDevices.getDisplayMedia === 'function';
+
+      // 1. Try getDisplayMedia on browsers that support it (desktop Chrome/Edge)
+      if (hasDisplayMedia) {
+        try {
+          const stream = await navigator.mediaDevices.getDisplayMedia({
+            video: true,
+            audio: false
+          });
+
+          // Universal stream capture using offscreen video (replaces buggy ImageCapture)
+          const video = document.createElement('video');
+          video.autoplay = true;
+          video.playsInline = true;
+          video.muted = true;
+          video.srcObject = stream;
+
+          await new Promise((resolve, reject) => {
+            video.onloadedmetadata = () => {
+              video.play().then(resolve).catch(reject);
+            };
+            setTimeout(resolve, 800); // Fallback timeout
+          });
+
+          // Brief delay to ensure frame is painted
+          await new Promise(r => setTimeout(r, 150));
+
+          const canvas = document.createElement('canvas');
+          canvas.width = video.videoWidth || 1080;
+          canvas.height = video.videoHeight || 1920;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(video, 0, 0);
+
+          stream.getTracks().forEach(t => t.stop());
+          loadCanvasToReview(canvas);
+          return;
+        } catch (err) {
+          console.warn('Screen share not supported or canceled:', err);
+          if (err.name === 'NotAllowedError' && !/Android|iPhone|iPad/i.test(navigator.userAgent)) {
+            setStatus('Screen share canceled.', 'info');
+            return;
+          }
+        }
       }
 
-      try {
-        const stream = await navigator.mediaDevices.getDisplayMedia({
-          video: { cursor: "always" },
-          audio: false
-        });
-
-        const track = stream.getVideoTracks()[0];
-        const imageCapture = new ImageCapture(track);
-        const bitmap = await imageCapture.grabFrame();
-        track.stop(); // Stop sharing immediately after grabbing 1 frame
-
-        const canvas = document.createElement('canvas');
-        canvas.width = bitmap.width;
-        canvas.height = bitmap.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(bitmap, 0, 0);
-
-        loadCanvasToReview(canvas);
-      } catch (err) {
-        console.warn('Screen share canceled or failed', err);
+      // 2. Android / Mobile fallback:
+      // Mobile Android browsers intentionally block web pages from live screen-recording the OS.
+      // We automatically open the Android recent screenshot picker with 1 tap!
+      setStatus('📱 Android restricts live screen recording. Opening recent screenshots...', 'info');
+      switchInputMode('upload');
+      const fileInput = document.getElementById('fileInput');
+      if (fileInput) {
+        fileInput.click();
       }
     }
 
