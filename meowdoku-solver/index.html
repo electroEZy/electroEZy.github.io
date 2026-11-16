@@ -1,0 +1,2103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>🐾 Meowdoku Solver - Phone Screen Camera & AI</title>
+  <style>
+    :root {
+      --bg: #0d0f15;
+      --card-bg: #161a24;
+      --card-sub: #1f2535;
+      --accent: #ff577d;
+      --accent-hover: #ff3360;
+      --accent-glow: rgba(255, 87, 125, 0.45);
+      --cat-gold: #ffc436;
+      --text: #f3f6fa;
+      --text-muted: #9ba7bb;
+      --border: #2c3549;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --radius: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px;
+      overflow-x: hidden;
+    }
+
+    header {
+      width: 100%;
+      max-width: 980px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 18px;
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      margin-bottom: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-cat {
+      font-size: 2.2rem;
+      animation: catWiggle 3.5s infinite ease-in-out;
+      cursor: pointer;
+    }
+
+    @keyframes catWiggle {
+      0%, 100% { transform: rotate(0deg); }
+      15% { transform: rotate(-10deg) scale(1.1); }
+      30% { transform: rotate(10deg) scale(1.1); }
+      45% { transform: rotate(-5deg); }
+      60% { transform: rotate(5deg); }
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      background: linear-gradient(135deg, #ff758c, #ff7eb3, #ffb86c);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .tagline {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .rules-banner {
+      width: 100%;
+      max-width: 980px;
+      background: rgba(255, 87, 125, 0.09);
+      border: 1px solid rgba(255, 87, 125, 0.28);
+      padding: 10px 16px;
+      border-radius: 12px;
+      font-size: 0.82rem;
+      color: #ffb3c1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 14px;
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .rules-banner span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .rule-highlight {
+      background: rgba(255, 87, 125, 0.22);
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .main-container {
+      width: 100%;
+      max-width: 980px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    @media (min-width: 860px) {
+      .main-container {
+        grid-template-columns: 1.15fr 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Tabs */
+    .input-tabs {
+      display: flex;
+      gap: 6px;
+      background: var(--card-sub);
+      padding: 4px;
+      border-radius: 10px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 8px 10px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 10px var(--accent-glow);
+    }
+
+    /* Camera / Photo Viewport */
+    .cam-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1/1;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #videoFeed {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    #scannerCanvas {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      cursor: crosshair;
+    }
+
+    .viewfinder-guide {
+      position: absolute;
+      width: 82%;
+      height: 82%;
+      border: 2px solid rgba(255, 87, 125, 0.95);
+      border-radius: 12px;
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .viewfinder-guide.phone-mode {
+      width: 62%;
+      height: 94%;
+      border-radius: 20px;
+      border-color: #38bdf8;
+    }
+
+    .guide-grid-lines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: grid;
+      opacity: 0.38;
+    }
+
+    .guide-label {
+      background: rgba(0,0,0,0.8);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      border: 1px solid rgba(255, 87, 125, 0.5);
+      z-index: 5;
+      text-align: center;
+    }
+
+    /* Corner handles for photo alignment */
+    .corner-handle {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      background: #ff3360;
+      border: 3.5px solid #ffffff;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      cursor: grab;
+      touch-action: none;
+      box-shadow: 0 0 10px rgba(0,0,0,0.9), 0 0 4px #ff3360;
+      z-index: 20;
+    }
+
+    .corner-handle:active {
+      cursor: grabbing;
+      background: #ffc436;
+      transform: translate(-50%, -50%) scale(1.25);
+    }
+
+    /* Loupe / Magnifier Glass */
+    #zoomLoupe {
+      position: absolute;
+      width: 100px;
+      height: 100px;
+      border: 3px solid #fff;
+      border-radius: 50%;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.8), inset 0 0 8px rgba(0,0,0,0.5);
+      pointer-events: none;
+      z-index: 30;
+      display: none;
+      overflow: hidden;
+      background: #000;
+    }
+
+    #loupeCanvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Drag & Drop Upload Zone */
+    .upload-zone {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 28px 16px;
+      text-align: center;
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      background: var(--card-sub);
+      transition: all 0.2s;
+      gap: 10px;
+    }
+
+    .upload-zone:hover {
+      border-color: var(--accent);
+      background: #272f44;
+    }
+
+    .upload-zone svg {
+      width: 48px;
+      height: 48px;
+      fill: var(--text-muted);
+    }
+
+    /* Buttons */
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 0.86rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #ff758c);
+      color: #fff;
+      box-shadow: 0 4px 14px var(--accent-glow);
+      flex: 1;
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.1);
+    }
+
+    .btn-secondary {
+      background: var(--card-sub);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: #2b3346;
+    }
+
+    .btn-screen {
+      background: linear-gradient(135deg, #0284c7, #0ea5e9);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(14, 165, 233, 0.4);
+      flex: 1;
+    }
+
+    .btn-screen:hover {
+      filter: brightness(1.1);
+    }
+
+    .btn-solve {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+      font-size: 1.05rem;
+      padding: 14px 22px;
+      box-shadow: 0 4px 18px rgba(16, 185, 129, 0.4);
+      flex: 1;
+    }
+
+    .btn-solve:hover {
+      filter: brightness(1.1);
+    }
+
+    /* Controls Panel */
+    .controls-panel {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      background: var(--card-sub);
+      padding: 10px 14px;
+      border-radius: 10px;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    select {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      outline: none;
+      cursor: pointer;
+    }
+
+    /* Color Palette */
+    .palette-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .palette-label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .palette-colors {
+      display: flex;
+      gap: 7px;
+      flex-wrap: wrap;
+      background: var(--card-sub);
+      padding: 10px;
+      border-radius: 10px;
+      min-height: 52px;
+      align-items: center;
+    }
+
+    .color-swatch {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      position: relative;
+      transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 800;
+      color: #fff;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    }
+
+    .color-swatch:hover {
+      transform: scale(1.12);
+    }
+
+    .color-swatch.active {
+      border: 3.5px solid #ffffff;
+      transform: scale(1.22);
+      box-shadow: 0 0 16px rgba(255, 255, 255, 0.95), 0 0 8px var(--accent);
+      z-index: 5;
+    }
+
+    .color-swatch.active::after {
+      content: '●';
+      position: absolute;
+      bottom: -6px;
+      font-size: 8px;
+      color: #fff;
+      text-shadow: 0 0 4px rgba(0,0,0,0.8);
+    }
+
+    /* Puzzle Board */
+    .board-wrapper {
+      width: 100%;
+      aspect-ratio: 1/1;
+      max-width: 440px;
+      margin: 0 auto;
+      background: #080a0d;
+      border-radius: 14px;
+      padding: 6px;
+      border: 3px solid #30394d;
+      box-shadow: 0 8px 26px rgba(0, 0, 0, 0.6);
+      position: relative;
+    }
+
+    .board-grid {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #111;
+      gap: 1px;
+    }
+
+    .cell {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: filter 0.12s;
+      outline: none;
+    }
+
+    .cell:hover {
+      filter: brightness(1.25);
+    }
+
+    /* Highlight matching the selected palette color */
+    .cell.highlight-region {
+      filter: brightness(1.22) contrast(1.1);
+      box-shadow: inset 0 0 0 3px #ffffff, 0 0 10px rgba(255, 255, 255, 0.7);
+      z-index: 2;
+      animation: highlightPulse 2.2s infinite alternate ease-in-out;
+    }
+
+    @keyframes highlightPulse {
+      0% {
+        box-shadow: inset 0 0 0 2.5px #ffffff, 0 0 6px rgba(255, 255, 255, 0.5);
+      }
+      100% {
+        box-shadow: inset 0 0 0 3.5px #ffffff, 0 0 12px rgba(255, 255, 255, 0.85);
+      }
+    }
+
+    /* Dim unselected color regions slightly so selected region stands out */
+    .cell.dimmed-region {
+      opacity: 0.75;
+      filter: brightness(0.88);
+    }
+
+    .cell.dimmed-region:hover {
+      opacity: 1;
+      filter: brightness(1.15);
+    }
+
+    .cell.border-top { border-top: 3.5px solid #0d0f15 !important; }
+    .cell.border-bottom { border-bottom: 3.5px solid #0d0f15 !important; }
+    .cell.border-left { border-left: 3.5px solid #0d0f15 !important; }
+    .cell.border-right { border-right: 3.5px solid #0d0f15 !important; }
+
+    .cell:not(.border-top) { border-top: 1px solid rgba(0,0,0,0.18); }
+    .cell:not(.border-bottom) { border-bottom: 1px solid rgba(0,0,0,0.18); }
+    .cell:not(.border-left) { border-left: 1px solid rgba(0,0,0,0.18); }
+    .cell:not(.border-right) { border-right: 1px solid rgba(0,0,0,0.18); }
+
+    .cat-icon {
+      width: 82%;
+      height: 82%;
+      animation: catPop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      filter: drop-shadow(0 3px 6px rgba(0,0,0,0.7));
+      pointer-events: none;
+    }
+
+    @keyframes catPop {
+      0% { transform: scale(0) rotate(-25deg); opacity: 0; }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+
+    /* Status Banner */
+    .status-badge {
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      line-height: 1.4;
+    }
+
+    .status-ready {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .status-error {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .status-info {
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    /* Presets buttons */
+    .presets-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .chip-btn {
+      padding: 7px 14px;
+      background: var(--card-sub);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .chip-btn:hover {
+      background: var(--card-bg);
+      color: #fff;
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .icon-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1.15rem;
+      padding: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+
+    .icon-btn:hover {
+      color: var(--text);
+      background: var(--card-sub);
+    }
+
+    /* Confetti Canvas */
+    #confettiCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 9999;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header>
+    <div class="brand">
+      <div class="logo-cat" onclick="playMeowSound(true)" title="Click me for a meow!">🐱</div>
+      <div>
+        <h1>Meowdoku Solver</h1>
+        <div class="tagline">Phone Screen Camera AI & Queens Puzzle Solver</div>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap: 8px;">
+      <button id="soundToggle" class="icon-btn" title="Toggle Meow Sound">🔊</button>
+      <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;" onclick="showHowTo()">❓ Rules & Help</button>
+    </div>
+  </header>
+
+  <!-- Rules Overview Banner -->
+  <div class="rules-banner">
+    <span>✨ <strong>Rules:</strong></span>
+    <span>👑 1 Cat per Row</span>
+    <span>👑 1 Cat per Column</span>
+    <span>🎨 1 Cat per Color Region</span>
+    <span>🚫 <span class="rule-highlight">No two cats can touch</span> (all 8 surrounding boxes forbidden)</span>
+  </div>
+
+  <!-- Main Container -->
+  <div class="main-container">
+
+    <!-- Left Column: Phone Screen Camera, Direct Capture & Alignment -->
+    <div class="card">
+      <div class="card-title">
+        <span>📸 Phone Screen Scanner</span>
+        <span style="font-size: 0.78rem; color: var(--text-muted);">Step 1: Capture Phone</span>
+      </div>
+
+      <!-- Mode selection tabs -->
+      <div class="input-tabs">
+        <button class="tab-btn active" id="tabCam" onclick="switchInputMode('camera')">📷 Point Camera at Phone</button>
+        <button class="tab-btn" id="tabDirectScreen" onclick="captureDirectScreen()">📱 Screen Share</button>
+        <button class="tab-btn" id="tabUpload" onclick="switchInputMode('upload')">📁 Screenshot / Paste</button>
+        <button class="tab-btn" id="tabPresets" onclick="switchInputMode('presets')">🧩 Presets</button>
+      </div>
+
+      <!-- Camera Feed & Captured Frame Display -->
+      <div id="camSection">
+        <div class="cam-wrapper" id="camWrapper">
+          <video id="videoFeed" autoplay playsinline muted></video>
+          <canvas id="scannerCanvas" style="display: none;"></canvas>
+          <div class="viewfinder-guide" id="viewfinder">
+            <div class="guide-grid-lines" id="guideLines"></div>
+            <div class="guide-label" id="guideLabel">Point at Phone Screen & Align Grid</div>
+          </div>
+          <!-- 4 Corner handles for perspective rectification -->
+          <div id="cornersContainer" style="display: none;">
+            <div class="corner-handle" id="handleTL" title="Top-Left Corner"></div>
+            <div class="corner-handle" id="handleTR" title="Top-Right Corner"></div>
+            <div class="corner-handle" id="handleBR" title="Bottom-Right Corner"></div>
+            <div class="corner-handle" id="handleBL" title="Bottom-Left Corner"></div>
+          </div>
+          <!-- Magnifying loupe when dragging corners -->
+          <div id="zoomLoupe"><canvas id="loupeCanvas" width="100" height="100"></canvas></div>
+        </div>
+
+        <!-- Live Camera Controls -->
+        <div class="btn-row" style="margin-top: 10px;" id="camButtons">
+          <button class="btn btn-primary" onclick="captureFromCamera()">📸 Snap Phone Screen</button>
+          <button class="btn btn-secondary" onclick="toggleViewfinderShape()" id="btnGuideMode">📱 Phone Guide</button>
+          <button class="btn btn-secondary" onclick="flipCamera()" title="Flip Front/Rear Camera">🔄 Flip</button>
+        </div>
+
+        <!-- Review & Adjustment Controls (After Capture) -->
+        <div class="btn-row" style="margin-top: 10px; display: none;" id="reviewButtons">
+          <button class="btn btn-primary" onclick="extractFromWarpedCanvas()">✨ Extract From Corners</button>
+          <button class="btn btn-secondary" onclick="autoDetectPhoneScreen()" title="Automatically detect high-contrast phone screen">🎯 Auto-Fit Screen</button>
+          <button class="btn btn-secondary" onclick="retakePhoto()">📷 Retake</button>
+        </div>
+      </div>
+
+      <!-- Image Upload & Paste Section -->
+      <div id="uploadSection" style="display: none;">
+        <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+          <svg viewBox="0 0 24 24">
+            <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+          </svg>
+          <div style="font-weight: 700; font-size: 0.95rem;">Upload or Paste Phone Screenshot</div>
+          <div style="font-size: 0.78rem; color: var(--text-muted);">Take a screenshot on your phone and drop it here, or press <strong>Ctrl + V</strong></div>
+          <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
+        </div>
+      </div>
+
+      <!-- Sample Presets Section -->
+      <div id="presetsSection" style="display: none;">
+        <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">Try instant pre-built verified Meowdoku puzzles:</div>
+        <div class="presets-row">
+          <button class="chip-btn" onclick="loadPreset('sample6x6')">🌸 6×6 Pastel Meadow</button>
+          <button class="chip-btn" onclick="loadPreset('sample7x7')">🌈 7×7 Rainbow Valley</button>
+          <button class="chip-btn" onclick="loadPreset('sample8x8')">👑 8×8 Classic Queens</button>
+          <button class="chip-btn" onclick="loadPreset('sample9x9')">🏰 9×9 Royal Palace</button>
+          <button class="chip-btn" onclick="loadPreset('sample10x10')">🐱 10×10 Cat Kingdom</button>
+        </div>
+      </div>
+
+      <!-- Phone Screen Capture Guidance -->
+      <div style="font-size: 0.76rem; color: var(--text-muted); line-height: 1.5; background: var(--card-sub); padding: 10px 14px; border-radius: 10px;">
+        📱 <strong>Phone Screen Tips:</strong>
+        <ul style="padding-left: 18px; margin-top: 4px; display: flex; flex-direction: column; gap: 3px;">
+          <li>Tilt phone slightly to avoid direct light bulb glare on the glass.</li>
+          <li>After snapping, the 4 red pins can be dragged to the 4 corners of the grid.</li>
+          <li>Built-in <em>Anti-Glare Filter</em> automatically ignores specular reflections on the screen!</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Right Column: Interactive Grid, Color Palette & Pure JS Solver -->
+    <div class="card">
+      <div class="card-title">
+        <span>🐾 Puzzle Board & Solution</span>
+        <span style="font-size: 0.78rem; color: var(--text-muted);">Step 2: Solve</span>
+      </div>
+
+      <!-- Board Size & Actions -->
+      <div class="controls-panel">
+        <div class="control-group">
+          <label for="gridSize">Grid Size (N×N):</label>
+          <select id="gridSize" onchange="changeGridSize(parseInt(this.value))">
+            <option value="5">5 × 5</option>
+            <option value="6">6 × 6</option>
+            <option value="7">7 × 7</option>
+            <option value="8" selected>8 × 8 (Standard)</option>
+            <option value="9">9 × 9</option>
+            <option value="10">10 × 10</option>
+            <option value="11">11 × 11</option>
+            <option value="12">12 × 12</option>
+          </select>
+        </div>
+
+        <div style="display: flex; gap: 6px;">
+          <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;" onclick="clearCats()" title="Clear placed cats">🧹 Clear Cats</button>
+          <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;" onclick="resetGrid()" title="Reset whole board">🔄 Reset</button>
+        </div>
+      </div>
+
+      <!-- Color Palette Picker for Fine Tuning -->
+      <div class="palette-container">
+        <div class="palette-label">
+          <span>🎨 Color Palette (Click to highlight on grid; double-click cell to pick):</span>
+          <span id="regionCountBadge" style="color: var(--accent); font-weight: 800;">8 Colors</span>
+        </div>
+        <div class="palette-colors" id="paletteColors">
+          <!-- Swatches generated dynamically -->
+        </div>
+      </div>
+
+      <!-- Visual Puzzle Board -->
+      <div class="board-wrapper">
+        <div class="board-grid" id="boardGrid">
+          <!-- Cells generated dynamically -->
+        </div>
+      </div>
+
+      <!-- Status banner -->
+      <div id="statusBadge" class="status-badge status-ready">
+        <span>🐱 Ready to solve! Snap phone screen with camera or click Solve below.</span>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="btn-row">
+        <button class="btn btn-solve" id="btnSolve" onclick="solvePuzzle()">
+          <span>🐾 Solve Meowdoku!</span>
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <canvas id="confettiCanvas"></canvas>
+
+  <script>
+    /* ===================================================================
+       MEOWDOKU SOLVER - CORE LOGIC & PHONE CAMERA CV (HTML + INLINE JS)
+       =================================================================== */
+
+    // Web Audio Synthesizer (Cute kitty meows & game sounds without external audio assets)
+    let audioCtx = null;
+    let soundEnabled = true;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function playMeowSound(isHappy = true) {
+      if (!soundEnabled) return;
+      try {
+        initAudio();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = 'triangle';
+        if (isHappy) {
+          // Cute rising kitten meow sound
+          osc.frequency.setValueAtTime(460, now);
+          osc.frequency.exponentialRampToValueAtTime(920, now + 0.16);
+          osc.frequency.exponentialRampToValueAtTime(680, now + 0.36);
+
+          gain.gain.setValueAtTime(0.01, now);
+          gain.gain.linearRampToValueAtTime(0.22, now + 0.1);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
+
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.42);
+        } else {
+          // Soft paw tap tone
+          osc.frequency.setValueAtTime(320, now);
+          osc.frequency.linearRampToValueAtTime(260, now + 0.12);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.18);
+        }
+      } catch (e) {
+        console.warn('Audio play failed', e);
+      }
+    }
+
+    document.getElementById('soundToggle').addEventListener('click', () => {
+      soundEnabled = !soundEnabled;
+      document.getElementById('soundToggle').textContent = soundEnabled ? '🔊' : '🔇';
+    });
+
+    // Cat SVG Icon with Crown
+    const CAT_SVG = `
+      <svg class="cat-icon" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="36" r="22" fill="#FFC83B" stroke="#2B1B17" stroke-width="3"/>
+        <polygon points="14,24 22,6 30,20" fill="#FFC83B" stroke="#2B1B17" stroke-width="3" stroke-linejoin="round"/>
+        <polygon points="18,21 23,10 27,19" fill="#FF849C"/>
+        <polygon points="50,24 42,6 34,20" fill="#FFC83B" stroke="#2B1B17" stroke-width="3" stroke-linejoin="round"/>
+        <polygon points="46,21 41,10 37,19" fill="#FF849C"/>
+        <path d="M26 14L32 8L38 14L35 18H29L26 14Z" fill="#FF476E" stroke="#2B1B17" stroke-width="1.5"/>
+        <circle cx="32" cy="8" r="2" fill="#FFF"/>
+        <ellipse cx="23" cy="34" rx="3.5" ry="4.5" fill="#2B1B17"/>
+        <circle cx="24.5" cy="32.5" r="1.5" fill="#FFFFFF"/>
+        <ellipse cx="41" cy="34" rx="3.5" ry="4.5" fill="#2B1B17"/>
+        <circle cx="42.5" cy="32.5" r="1.5" fill="#FFFFFF"/>
+        <polygon points="32,40 29.5,37 34.5,37" fill="#FF849C"/>
+        <path d="M32 40 C30.5 43, 27 43, 26 41.5 M32 40 C33.5 43, 37 43, 38 41.5" stroke="#2B1B17" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="10" y1="36" x2="20" y2="38" stroke="#2B1B17" stroke-width="2" stroke-linecap="round"/>
+        <line x1="11" y1="42" x2="20" y2="41" stroke="#2B1B17" stroke-width="2" stroke-linecap="round"/>
+        <line x1="54" y1="36" x2="44" y2="38" stroke="#2B1B17" stroke-width="2" stroke-linecap="round"/>
+        <line x1="53" y1="42" x2="44" y2="41" stroke="#2B1B17" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="18" cy="40" r="3" fill="#FFA3B5" opacity="0.8"/>
+        <circle cx="46" cy="40" r="3" fill="#FFA3B5" opacity="0.8"/>
+      </svg>
+    `;
+
+    // Vibrant distinct palette for regions
+    const DISTINCT_PALETTE = [
+      '#FF7E67', // Coral
+      '#6BCB77', // Mint Green
+      '#4D96FF', // Sky Blue
+      '#FFD93D', // Lemon Yellow
+      '#9D4EDD', // Violet
+      '#FF6584', // Rose Pink
+      '#00C9A7', // Aqua Teal
+      '#F38181', // Peach
+      '#845EC2', // Royal Purple
+      '#FF9671', // Orange Salmon
+      '#0081CF', // Ocean Blue
+      '#E8BD0D'  // Gold Ochre
+    ];
+
+    // State Variables
+    let N = 8;
+    let gridRegions = [];
+    let catPlacements = [];
+    let activePaletteColor = 0;
+    let activeInputMode = 'camera';
+    let isPainting = false;
+
+    // Camera and Corner Adjustment State
+    let videoStream = null;
+    let useFacingMode = 'environment';
+    let rawStaticCanvas = document.createElement('canvas'); // Clean copy of captured image
+    let isPhoneGuideMode = false;
+
+    let cornerPoints = [
+      { x: 0.15, y: 0.15 }, // TL
+      { x: 0.85, y: 0.15 }, // TR
+      { x: 0.85, y: 0.85 }, // BR
+      { x: 0.15, y: 0.85 }  // BL
+    ];
+    let activeHandle = null;
+
+    /* ===================================================================
+       INITIALIZATION
+       =================================================================== */
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initGrid(8);
+      loadPreset('sample8x8');
+      setupCamera();
+      setupPasteAndDrop();
+      setupCornerHandles();
+      updateViewfinderGridLines();
+    });
+
+    function setStatus(message, type = 'info') {
+      const badge = document.getElementById('statusBadge');
+      badge.className = `status-badge status-${type}`;
+      let icon = '🐱';
+      if (type === 'ready') icon = '🎉';
+      if (type === 'error') icon = '⚠️';
+      if (type === 'info') icon = '💡';
+      badge.innerHTML = `<span>${icon} ${message}</span>`;
+    }
+
+    function toggleViewfinderShape() {
+      isPhoneGuideMode = !isPhoneGuideMode;
+      const vf = document.getElementById('viewfinder');
+      const btn = document.getElementById('btnGuideMode');
+      const lbl = document.getElementById('guideLabel');
+
+      if (isPhoneGuideMode) {
+        vf.classList.add('phone-mode');
+        btn.textContent = '⏹ Square Guide';
+        lbl.textContent = 'Fit Phone Screen Inside Box';
+      } else {
+        vf.classList.remove('phone-mode');
+        btn.textContent = '📱 Phone Guide';
+        lbl.textContent = 'Point at Phone Screen & Align Grid';
+      }
+    }
+
+    function updateViewfinderGridLines() {
+      const guideLines = document.getElementById('guideLines');
+      guideLines.style.gridTemplateColumns = `repeat(${N}, 1fr)`;
+      guideLines.style.gridTemplateRows = `repeat(${N}, 1fr)`;
+      guideLines.innerHTML = '';
+      for (let i = 0; i < N * N; i++) {
+        const cellLine = document.createElement('div');
+        cellLine.style.border = '1px solid rgba(255, 87, 125, 0.4)';
+        guideLines.appendChild(cellLine);
+      }
+    }
+
+    /* ===================================================================
+       GRID SETUP & RENDERING
+       =================================================================== */
+
+    function initGrid(size) {
+      N = size;
+      gridRegions = [];
+      catPlacements = [];
+      for (let r = 0; r < N; r++) {
+        gridRegions[r] = [];
+        catPlacements[r] = [];
+        for (let c = 0; c < N; c++) {
+          gridRegions[r][c] = r % N;
+          catPlacements[r][c] = false;
+        }
+      }
+      updateViewfinderGridLines();
+      renderPalette();
+      renderBoard();
+      updateRegionBadge();
+    }
+
+    function changeGridSize(newSize) {
+      if (newSize < 4 || newSize > 12) return;
+      initGrid(newSize);
+      setStatus(`Grid resized to ${newSize} × ${newSize}. Paint regions or scan with camera!`, 'info');
+    }
+
+    function renderPalette() {
+      const container = document.getElementById('paletteColors');
+      container.innerHTML = '';
+      for (let i = 0; i < N; i++) {
+        const swatch = document.createElement('div');
+        const isActive = (i === activePaletteColor);
+        swatch.className = `color-swatch ${isActive ? 'active' : ''}`;
+        swatch.style.backgroundColor = DISTINCT_PALETTE[i % DISTINCT_PALETTE.length];
+        swatch.textContent = (i + 1);
+        swatch.title = `Color Region ${i + 1} (Click to highlight on grid & paint)`;
+        swatch.onclick = () => {
+          activePaletteColor = i;
+          renderPalette();
+          renderBoard();
+        };
+        container.appendChild(swatch);
+      }
+    }
+
+    function renderBoard() {
+      const board = document.getElementById('boardGrid');
+      board.style.gridTemplateColumns = `repeat(${N}, 1fr)`;
+      board.style.gridTemplateRows = `repeat(${N}, 1fr)`;
+      board.innerHTML = '';
+
+      for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N; c++) {
+          const cell = document.createElement('div');
+          const region = gridRegions[r][c];
+          cell.className = 'cell';
+          cell.dataset.row = r;
+          cell.dataset.col = c;
+          cell.style.backgroundColor = DISTINCT_PALETTE[region % DISTINCT_PALETTE.length];
+
+          // Highlight selected color region on grid
+          if (region === activePaletteColor) {
+            cell.classList.add('highlight-region');
+          } else {
+            cell.classList.add('dimmed-region');
+          }
+
+          // Borders where adjacent cells differ in color region
+          if (r === 0 || gridRegions[r - 1][c] !== region) cell.classList.add('border-top');
+          if (r === N - 1 || gridRegions[r + 1][c] !== region) cell.classList.add('border-bottom');
+          if (c === 0 || gridRegions[r][c - 1] !== region) cell.classList.add('border-left');
+          if (c === N - 1 || gridRegions[r][c + 1] !== region) cell.classList.add('border-right');
+
+          // Cat display
+          if (catPlacements[r][c]) {
+            cell.innerHTML = CAT_SVG;
+          }
+
+          // Quick color select via double click
+          cell.ondblclick = (e) => {
+            e.preventDefault();
+            activePaletteColor = region;
+            renderPalette();
+            renderBoard();
+            playMeowSound(false);
+          };
+
+          // Mouse / Touch Painting interactions
+          cell.onmousedown = (e) => {
+            if (e.button === 0) { // left click: paint color
+              isPainting = true;
+              paintCell(r, c);
+            } else if (e.button === 2) { // right click: toggle cat
+              e.preventDefault();
+              toggleCat(r, c);
+            }
+          };
+
+          cell.onmouseenter = () => {
+            if (isPainting) paintCell(r, c);
+          };
+
+          cell.oncontextmenu = (e) => {
+            e.preventDefault();
+            toggleCat(r, c);
+          };
+
+          board.appendChild(cell);
+        }
+      }
+
+      window.onmouseup = () => { isPainting = false; };
+    }
+
+    function paintCell(r, c) {
+      if (gridRegions[r][c] !== activePaletteColor) {
+        gridRegions[r][c] = activePaletteColor;
+        playMeowSound(false);
+        renderBoard();
+        updateRegionBadge();
+      }
+    }
+
+    function toggleCat(r, c) {
+      catPlacements[r][c] = !catPlacements[r][c];
+      playMeowSound(catPlacements[r][c]);
+      renderBoard();
+      validateBoardInteractive();
+    }
+
+    function clearCats() {
+      for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N; c++) {
+          catPlacements[r][c] = false;
+        }
+      }
+      renderBoard();
+      setStatus('Cleared placed cats from board.', 'info');
+    }
+
+    function resetGrid() {
+      initGrid(N);
+      setStatus(`Reset board to default ${N}×${N}.`, 'info');
+    }
+
+    function updateRegionBadge() {
+      const distinct = new Set();
+      for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N; c++) {
+          distinct.add(gridRegions[r][c]);
+        }
+      }
+      const badge = document.getElementById('regionCountBadge');
+      badge.textContent = `${distinct.size} / ${N} Colors`;
+      if (distinct.size === N) {
+        badge.style.color = 'var(--success)';
+      } else {
+        badge.style.color = 'var(--accent)';
+      }
+    }
+
+    /* ===================================================================
+       MEOWDOKU CSP SOLVER (Pure JavaScript)
+       Rules:
+       1. Exactly 1 cat per row.
+       2. Exactly 1 cat per column.
+       3. Exactly 1 cat per color region.
+       4. No two cats can touch: forbidden to be in any of the 8 surrounding boxes!
+       =================================================================== */
+
+    function solvePuzzle() {
+      clearCats();
+
+      // Check number of distinct regions
+      const distinctRegions = new Set();
+      for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N; c++) {
+          distinctRegions.add(gridRegions[r][c]);
+        }
+      }
+
+      if (distinctRegions.size !== N) {
+        setStatus(`Grid currently has ${distinctRegions.size} distinct colors, but needs exactly ${N} colors (1 cat per color). Please paint missing colors using the palette!`, 'error');
+        return;
+      }
+
+      // Map regions to normalized 0..N-1
+      const regionMap = new Map();
+      let nextRegId = 0;
+      distinctRegions.forEach(id => {
+        regionMap.set(id, nextRegId++);
+      });
+
+      const normGrid = [];
+      for (let r = 0; r < N; r++) {
+        normGrid[r] = [];
+        for (let c = 0; c < N; c++) {
+          normGrid[r][c] = regionMap.get(gridRegions[r][c]);
+        }
+      }
+
+      // CSP State
+      const colOfRow = new Array(N).fill(-1);
+      const usedCols = new Array(N).fill(false);
+      const usedRegions = new Array(N).fill(false);
+
+      // Backtracking CSP with forward pruning
+      function backtrack(row) {
+        if (row === N) {
+          return true; // All N cats placed peacefully!
+        }
+
+        for (let col = 0; col < N; col++) {
+          // Rule 2: Column must not have another cat
+          if (usedCols[col]) continue;
+
+          // Rule 3: Color region must not have another cat
+          const reg = normGrid[row][col];
+          if (usedRegions[reg]) continue;
+
+          // Rule 4: No two cats can touch (all 8 surrounding boxes)!
+          // Since we assign row-by-row, any previous row <= row-2 is at vertical distance >= 2,
+          // so cats in earlier rows can NEVER touch row.
+          // Therefore, checking distance with row - 1 covers all 8 surrounding cells!
+          if (row > 0) {
+            const prevCol = colOfRow[row - 1];
+            if (Math.abs(col - prevCol) <= 1) {
+              // Diagonal or directly vertical neighbor
+              continue;
+            }
+          }
+
+          // Forward place
+          colOfRow[row] = col;
+          usedCols[col] = true;
+          usedRegions[reg] = true;
+
+          if (backtrack(row + 1)) {
+            return true;
+          }
+
+          // Backtrack / Undo
+          colOfRow[row] = -1;
+          usedCols[col] = false;
+          usedRegions[reg] = false;
+        }
+
+        return false;
+      }
+
+      const t0 = performance.now();
+      const success = backtrack(0);
+      const elapsed = (performance.now() - t0).toFixed(1);
+
+      if (success) {
+        for (let r = 0; r < N; r++) {
+          catPlacements[r][colOfRow[r]] = true;
+        }
+        renderBoard();
+        playMeowSound(true);
+        triggerConfetti();
+        setStatus(`Purr-fect! Solution found in ${elapsed}ms! All ${N} cats placed with no touches! 🐾`, 'ready');
+      } else {
+        setStatus(`No valid solution exists for this color layout. Check for color regions with no valid non-touching spots!`, 'error');
+      }
+    }
+
+    function validateBoardInteractive() {
+      let cats = [];
+      for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N; c++) {
+          if (catPlacements[r][c]) cats.push({ r, c, reg: gridRegions[r][c] });
+        }
+      }
+
+      let conflict = null;
+      for (let i = 0; i < cats.length; i++) {
+        for (let j = i + 1; j < cats.length; j++) {
+          const a = cats[i];
+          const b = cats[j];
+
+          if (a.r === b.r) conflict = `Two cats in Row ${a.r + 1}!`;
+          else if (a.c === b.c) conflict = `Two cats in Column ${a.c + 1}!`;
+          else if (a.reg === b.reg) conflict = `Two cats in the same color region!`;
+          else if (Math.abs(a.r - b.r) <= 1 && Math.abs(a.c - b.c) <= 1) {
+            conflict = `Touching cats at (${a.r + 1},${a.c + 1}) and (${b.r + 1},${b.c + 1})!`;
+          }
+          if (conflict) break;
+        }
+        if (conflict) break;
+      }
+
+      if (conflict) {
+        setStatus(`Collision: ${conflict}`, 'error');
+      } else if (cats.length === N) {
+        playMeowSound(true);
+        triggerConfetti();
+        setStatus(`Purr-fect! You placed all ${N} cats legally! 🎉`, 'ready');
+      } else {
+        setStatus(`${cats.length} / ${N} cats placed legally. Keep going!`, 'info');
+      }
+    }
+
+    /* ===================================================================
+       PHONE SCREEN CAMERA SCANNING & BILINEAR RECTIFICATION
+       =================================================================== */
+
+    async function setupCamera() {
+      const video = document.getElementById('videoFeed');
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setStatus('Camera API not supported in this browser. Please use Upload or Presets.', 'error');
+        return;
+      }
+
+      try {
+        if (videoStream) {
+          videoStream.getTracks().forEach(t => t.stop());
+        }
+
+        videoStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: useFacingMode,
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          },
+          audio: false
+        });
+
+        video.srcObject = videoStream;
+        video.onloadedmetadata = () => {
+          video.play();
+        };
+      } catch (err) {
+        console.warn('Camera access error:', err);
+        setStatus('Camera permission denied or camera not found. Try Upload or Presets!', 'error');
+      }
+    }
+
+    function flipCamera() {
+      useFacingMode = (useFacingMode === 'environment') ? 'user' : 'environment';
+      setupCamera();
+    }
+
+    // Direct Screen Capture (Share screen / window)
+    async function captureDirectScreen() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        alert('Direct screen capture is not supported on this browser/device. Pointing your camera or uploading a screenshot works everywhere!');
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: { cursor: "always" },
+          audio: false
+        });
+
+        const track = stream.getVideoTracks()[0];
+        const imageCapture = new ImageCapture(track);
+        const bitmap = await imageCapture.grabFrame();
+        track.stop(); // Stop sharing immediately after grabbing 1 frame
+
+        const canvas = document.createElement('canvas');
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(bitmap, 0, 0);
+
+        loadCanvasToReview(canvas);
+      } catch (err) {
+        console.warn('Screen share canceled or failed', err);
+      }
+    }
+
+    function captureFromCamera() {
+      const video = document.getElementById('videoFeed');
+      if (!video || !video.videoWidth) {
+        setStatus('Camera not ready. Make sure camera is active!', 'error');
+        return;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0);
+
+      loadCanvasToReview(canvas);
+    }
+
+    function loadCanvasToReview(canvas) {
+      // Store static clean snapshot
+      rawStaticCanvas.width = canvas.width;
+      rawStaticCanvas.height = canvas.height;
+      rawStaticCanvas.getContext('2d').drawImage(canvas, 0, 0);
+
+      const scannerCanvas = document.getElementById('scannerCanvas');
+      scannerCanvas.width = canvas.width;
+      scannerCanvas.height = canvas.height;
+
+      showReviewMode();
+    }
+
+    function showReviewMode() {
+      document.getElementById('videoFeed').style.display = 'none';
+      document.getElementById('viewfinder').style.display = 'none';
+      document.getElementById('scannerCanvas').style.display = 'block';
+      document.getElementById('camButtons').style.display = 'none';
+      document.getElementById('reviewButtons').style.display = 'flex';
+      document.getElementById('cornersContainer').style.display = 'block';
+
+      // Attempt auto-detection of the phone screen or set default corners
+      autoDetectPhoneScreen();
+      renderCornerHandles();
+      drawCornerOverlay();
+      setStatus('Adjust the 4 corner pins on the 4 corners of your puzzle grid, then click "Extract From Corners"!', 'info');
+    }
+
+    function retakePhoto() {
+      document.getElementById('videoFeed').style.display = 'block';
+      document.getElementById('viewfinder').style.display = 'flex';
+      document.getElementById('scannerCanvas').style.display = 'none';
+      document.getElementById('camButtons').style.display = 'flex';
+      document.getElementById('reviewButtons').style.display = 'none';
+      document.getElementById('cornersContainer').style.display = 'none';
+      document.getElementById('zoomLoupe').style.display = 'none';
+      setStatus('Ready to scan phone screen. Align and snap!', 'info');
+    }
+
+    /* ===================================================================
+       SMART AUTO-DETECTION OF PHONE SCREEN / BRIGHT GRID
+       =================================================================== */
+
+    function autoDetectPhoneScreen() {
+      const w = rawStaticCanvas.width;
+      const h = rawStaticCanvas.height;
+      if (!w || !h) return;
+
+      const ctx = rawStaticCanvas.getContext('2d');
+      // Downsample for fast screen thresholding
+      const dw = 120;
+      const dh = Math.floor(120 * (h / w));
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = dw;
+      tempCanvas.height = dh;
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCtx.drawImage(rawStaticCanvas, 0, 0, dw, dh);
+
+      const imgData = tempCtx.getImageData(0, 0, dw, dh).data;
+      let totalLum = 0;
+      const lumGrid = new Float32Array(dw * dh);
+
+      for (let i = 0; i < dw * dh; i++) {
+        const r = imgData[i * 4];
+        const g = imgData[i * 4 + 1];
+        const b = imgData[i * 4 + 2];
+        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+        lumGrid[i] = lum;
+        totalLum += lum;
+      }
+
+      const avgLum = totalLum / (dw * dh);
+      const threshold = Math.max(60, avgLum * 1.15); // Phone screen is brighter than ambient
+
+      let minX = dw, maxX = 0, minY = dh, maxY = 0;
+      let count = 0;
+
+      for (let y = 0; y < dh; y++) {
+        for (let x = 0; x < dw; x++) {
+          if (lumGrid[y * dw + x] > threshold) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+            count++;
+          }
+        }
+      }
+
+      // If a distinct bright phone screen rectangle was found (> 10% and < 90% of frame)
+      if (count > (dw * dh * 0.08) && (maxX - minX) > dw * 0.25 && (maxY - minY) > dh * 0.25) {
+        const padX = (maxX - minX) * 0.03;
+        const padY = (maxY - minY) * 0.03;
+        const x1 = Math.max(0.05, (minX + padX) / dw);
+        const x2 = Math.min(0.95, (maxX - padX) / dw);
+        const y1 = Math.max(0.05, (minY + padY) / dh);
+        const y2 = Math.min(0.95, (maxY - padY) / dh);
+
+        cornerPoints = [
+          { x: x1, y: y1 },
+          { x: x2, y: y1 },
+          { x: x2, y: y2 },
+          { x: x1, y: y2 }
+        ];
+        setStatus('Auto-fitted to detected phone screen! Fine-tune corners if needed.', 'ready');
+      } else {
+        // Default standard square centered
+        cornerPoints = [
+          { x: 0.15, y: 0.15 },
+          { x: 0.85, y: 0.15 },
+          { x: 0.85, y: 0.85 },
+          { x: 0.15, y: 0.85 }
+        ];
+      }
+
+      renderCornerHandles();
+      drawCornerOverlay();
+    }
+
+    /* ===================================================================
+       CORNER PIN DRAGGING & MAGNIFYING LOUPE
+       =================================================================== */
+
+    function setupCornerHandles() {
+      const wrapper = document.getElementById('camWrapper');
+      const loupe = document.getElementById('zoomLoupe');
+      const loupeCanvas = document.getElementById('loupeCanvas');
+      const loupeCtx = loupeCanvas.getContext('2d');
+
+      const handles = [
+        { el: document.getElementById('handleTL'), idx: 0 },
+        { el: document.getElementById('handleTR'), idx: 1 },
+        { el: document.getElementById('handleBR'), idx: 2 },
+        { el: document.getElementById('handleBL'), idx: 3 }
+      ];
+
+      handles.forEach(h => {
+        const onMove = (clientX, clientY) => {
+          const rect = wrapper.getBoundingClientRect();
+          let x = (clientX - rect.left) / rect.width;
+          let y = (clientY - rect.top) / rect.height;
+          x = Math.max(0, Math.min(1, x));
+          y = Math.max(0, Math.min(1, y));
+          cornerPoints[h.idx] = { x, y };
+          renderCornerHandles();
+          drawCornerOverlay();
+
+          // Update Magnifying Loupe
+          if (rawStaticCanvas.width > 0) {
+            loupe.style.display = 'block';
+            const loupeX = Math.max(10, Math.min(rect.width - 110, clientX - rect.left - 50));
+            const loupeY = Math.max(10, clientY - rect.top - 120);
+            loupe.style.left = `${loupeX}px`;
+            loupe.style.top = `${loupeY}px`;
+
+            const imgX = x * rawStaticCanvas.width;
+            const imgY = y * rawStaticCanvas.height;
+            const zoomSize = 50; // Size of source area to magnify
+
+            loupeCtx.clearRect(0, 0, 100, 100);
+            loupeCtx.drawImage(
+              rawStaticCanvas,
+              imgX - zoomSize / 2, imgY - zoomSize / 2, zoomSize, zoomSize,
+              0, 0, 100, 100
+            );
+
+            // Crosshair in loupe
+            loupeCtx.strokeStyle = '#ff3360';
+            loupeCtx.lineWidth = 2;
+            loupeCtx.beginPath();
+            loupeCtx.moveTo(50, 30); loupeCtx.lineTo(50, 70);
+            loupeCtx.moveTo(30, 50); loupeCtx.lineTo(70, 50);
+            loupeCtx.stroke();
+          }
+        };
+
+        h.el.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          h.el.setPointerCapture(e.pointerId);
+          activeHandle = h.idx;
+          onMove(e.clientX, e.clientY);
+        });
+
+        h.el.addEventListener('pointermove', (e) => {
+          if (activeHandle === h.idx) {
+            onMove(e.clientX, e.clientY);
+          }
+        });
+
+        const stopDrag = () => {
+          activeHandle = null;
+          loupe.style.display = 'none';
+        };
+
+        h.el.addEventListener('pointerup', stopDrag);
+        h.el.addEventListener('pointercancel', stopDrag);
+      });
+    }
+
+    function renderCornerHandles() {
+      const handles = ['handleTL', 'handleTR', 'handleBR', 'handleBL'];
+      for (let i = 0; i < 4; i++) {
+        const el = document.getElementById(handles[i]);
+        el.style.left = `${cornerPoints[i].x * 100}%`;
+        el.style.top = `${cornerPoints[i].y * 100}%`;
+      }
+    }
+
+    function drawCornerOverlay() {
+      const scannerCanvas = document.getElementById('scannerCanvas');
+      if (!scannerCanvas || rawStaticCanvas.width === 0) return;
+
+      const ctx = scannerCanvas.getContext('2d');
+      // Redraw clean snapshot
+      ctx.drawImage(rawStaticCanvas, 0, 0);
+
+      const w = scannerCanvas.width;
+      const h = scannerCanvas.height;
+
+      const p0 = { x: cornerPoints[0].x * w, y: cornerPoints[0].y * h };
+      const p1 = { x: cornerPoints[1].x * w, y: cornerPoints[1].y * h };
+      const p2 = { x: cornerPoints[2].x * w, y: cornerPoints[2].y * h };
+      const p3 = { x: cornerPoints[3].x * w, y: cornerPoints[3].y * h };
+
+      ctx.save();
+      // Outer polygon
+      ctx.strokeStyle = '#ff3360';
+      ctx.lineWidth = Math.max(3, w * 0.005);
+      ctx.beginPath();
+      ctx.moveTo(p0.x, p0.y);
+      ctx.lineTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.lineTo(p3.x, p3.y);
+      ctx.closePath();
+      ctx.stroke();
+
+      // Interior grid lines using bilinear interpolation
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.lineWidth = Math.max(1.5, w * 0.0025);
+
+      for (let i = 1; i < N; i++) {
+        const u = i / N;
+        const top = lerp2D(p0, p1, u);
+        const bot = lerp2D(p3, p2, u);
+        ctx.beginPath();
+        ctx.moveTo(top.x, top.y);
+        ctx.lineTo(bot.x, bot.y);
+        ctx.stroke();
+      }
+
+      for (let j = 1; j < N; j++) {
+        const v = j / N;
+        const left = lerp2D(p0, p3, v);
+        const right = lerp2D(p1, p2, v);
+        ctx.beginPath();
+        ctx.moveTo(left.x, left.y);
+        ctx.lineTo(right.x, right.y);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    function lerp(a, b, t) {
+      return a + (b - a) * t;
+    }
+
+    function lerp2D(pA, pB, t) {
+      return { x: lerp(pA.x, pB.x, t), y: lerp(pA.y, pB.y, t) };
+    }
+
+    function quadBilinear(p0, p1, p2, p3, u, v) {
+      const top = lerp2D(p0, p1, u);
+      const bot = lerp2D(p3, p2, u);
+      return lerp2D(top, bot, v);
+    }
+
+    /* ===================================================================
+       PHONE SCREEN COLOR SAMPLING WITH ANTI-GLARE FILTER
+       =================================================================== */
+
+    function extractFromWarpedCanvas() {
+      if (rawStaticCanvas.width === 0) return;
+      setStatus('Sampling phone screen cells with anti-glare filtering...', 'info');
+
+      const w = rawStaticCanvas.width;
+      const h = rawStaticCanvas.height;
+      const ctx = rawStaticCanvas.getContext('2d');
+
+      const p0 = { x: cornerPoints[0].x * w, y: cornerPoints[0].y * h };
+      const p1 = { x: cornerPoints[1].x * w, y: cornerPoints[1].y * h };
+      const p2 = { x: cornerPoints[2].x * w, y: cornerPoints[2].y * h };
+      const p3 = { x: cornerPoints[3].x * w, y: cornerPoints[3].y * h };
+
+      const cellSamples = [];
+
+      for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N; c++) {
+          const uCenter = (c + 0.5) / N;
+          const vCenter = (r + 0.5) / N;
+          const pt = quadBilinear(p0, p1, p2, p3, uCenter, vCenter);
+
+          // Sample an 8x8 patch around the cell center to avoid grid borders
+          const sampleSize = Math.max(4, Math.floor(Math.min(w, h) / (N * 5)));
+          const sx = Math.max(0, Math.min(w - sampleSize, Math.floor(pt.x - sampleSize / 2)));
+          const sy = Math.max(0, Math.min(h - sampleSize, Math.floor(pt.y - sampleSize / 2)));
+          const data = ctx.getImageData(sx, sy, sampleSize, sampleSize).data;
+
+          // Anti-Glare & Border Rejection:
+          // Ignore blown-out white glare spots on the glass (> 242)
+          // and black boundary lines (< 28)
+          const validPixels = [];
+          for (let p = 0; p < data.length; p += 4) {
+            const pr = data[p], pg = data[p + 1], pb = data[p + 2];
+            const b = (pr + pg + pb) / 3;
+            if (b > 28 && b < 242) {
+              validPixels.push([pr, pg, pb]);
+            }
+          }
+
+          // If too many glare reflections, fallback to median of all pixels
+          const pixelsToUse = validPixels.length >= 4 ? validPixels : [];
+          if (pixelsToUse.length === 0) {
+            for (let p = 0; p < data.length; p += 4) {
+              pixelsToUse.push([data[p], data[p + 1], data[p + 2]]);
+            }
+          }
+
+          // Compute median RGB to resist any moire striping on the screen
+          const sortedR = pixelsToUse.map(px => px[0]).sort((a,b) => a - b);
+          const sortedG = pixelsToUse.map(px => px[1]).sort((a,b) => a - b);
+          const sortedB = pixelsToUse.map(px => px[2]).sort((a,b) => a - b);
+          const mid = Math.floor(sortedR.length / 2);
+
+          cellSamples.push({
+            r, c,
+            rgb: [sortedR[mid], sortedG[mid], sortedB[mid]]
+          });
+        }
+      }
+
+      // K-Means clustering into N color regions
+      const clusters = runKMeans(cellSamples.map(s => s.rgb), N, 35);
+
+      // Assign to grid
+      for (let i = 0; i < cellSamples.length; i++) {
+        const item = cellSamples[i];
+        gridRegions[item.r][item.c] = clusters.assignments[i];
+      }
+
+      renderPalette();
+      renderBoard();
+      updateRegionBadge();
+      playMeowSound(true);
+      setStatus(`Captured phone screen into ${N} color regions! Tap any cell if you want to touch up, then hit Solve!`, 'ready');
+    }
+
+    function colorDistSq(c1, c2) {
+      const dr = c1[0] - c2[0];
+      const dg = c1[1] - c2[1];
+      const db = c1[2] - c2[2];
+      return dr * dr + dg * dg + db * db;
+    }
+
+    function runKMeans(points, k, maxIter = 25) {
+      if (points.length === 0) return { assignments: [], centroids: [] };
+
+      const centroids = [];
+      centroids.push([...points[Math.floor(Math.random() * points.length)]]);
+
+      while (centroids.length < k) {
+        let maxD = -1;
+        let bestCandidate = points[0];
+        for (const pt of points) {
+          let minD = Infinity;
+          for (const c of centroids) {
+            const d = colorDistSq(pt, c);
+            if (d < minD) minD = d;
+          }
+          if (minD > maxD) {
+            maxD = minD;
+            bestCandidate = pt;
+          }
+        }
+        centroids.push([...bestCandidate]);
+      }
+
+      let assignments = new Array(points.length).fill(0);
+
+      for (let iter = 0; iter < maxIter; iter++) {
+        let changed = false;
+
+        for (let i = 0; i < points.length; i++) {
+          let bestCluster = 0;
+          let bestDist = Infinity;
+          for (let c = 0; c < k; c++) {
+            const dist = colorDistSq(points[i], centroids[c]);
+            if (dist < bestDist) {
+              bestDist = dist;
+              bestCluster = c;
+            }
+          }
+          if (assignments[i] !== bestCluster) {
+            assignments[i] = bestCluster;
+            changed = true;
+          }
+        }
+
+        if (!changed) break;
+
+        const sums = Array.from({ length: k }, () => [0, 0, 0]);
+        const counts = new Array(k).fill(0);
+
+        for (let i = 0; i < points.length; i++) {
+          const cl = assignments[i];
+          sums[cl][0] += points[i][0];
+          sums[cl][1] += points[i][1];
+          sums[cl][2] += points[i][2];
+          counts[cl]++;
+        }
+
+        for (let c = 0; c < k; c++) {
+          if (counts[c] > 0) {
+            centroids[c][0] = sums[c][0] / counts[c];
+            centroids[c][1] = sums[c][1] / counts[c];
+            centroids[c][2] = sums[c][2] / counts[c];
+          }
+        }
+      }
+
+      return { assignments, centroids };
+    }
+
+    /* ===================================================================
+       FILE UPLOAD & CLIPBOARD PASTE
+       =================================================================== */
+
+    function switchInputMode(mode) {
+      activeInputMode = mode;
+      document.getElementById('tabCam').classList.toggle('active', mode === 'camera');
+      document.getElementById('tabUpload').classList.toggle('active', mode === 'upload');
+      document.getElementById('tabPresets').classList.toggle('active', mode === 'presets');
+
+      document.getElementById('camSection').style.display = (mode === 'camera' || mode === 'upload') ? 'block' : 'none';
+      document.getElementById('uploadSection').style.display = (mode === 'upload') ? 'block' : 'none';
+      document.getElementById('presetsSection').style.display = (mode === 'presets') ? 'block' : 'none';
+
+      if (mode === 'camera') {
+        retakePhoto();
+        setupCamera();
+      } else if (mode === 'presets') {
+        if (videoStream) {
+          videoStream.getTracks().forEach(t => t.stop());
+          videoStream = null;
+        }
+      }
+    }
+
+    function setupPasteAndDrop() {
+      const dropZone = document.getElementById('dropZone');
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          dropZone.style.borderColor = 'var(--accent)';
+        });
+      });
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          dropZone.style.borderColor = 'var(--border)';
+        });
+      });
+      dropZone.addEventListener('drop', (e) => {
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          loadFile(e.dataTransfer.files[0]);
+        }
+      });
+
+      // Global paste (Ctrl + V)
+      window.addEventListener('paste', (e) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type.indexOf('image') !== -1) {
+            const blob = items[i].getAsFile();
+            loadFile(blob);
+            break;
+          }
+        }
+      });
+    }
+
+    function handleFileSelect(e) {
+      if (e.target.files && e.target.files[0]) {
+        loadFile(e.target.files[0]);
+      }
+    }
+
+    function loadFile(file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+
+          switchInputMode('camera'); // display review canvas in wrapper
+          loadCanvasToReview(canvas);
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    /* ===================================================================
+       PRESET PUZZLES (100% Solvable & Verified Under All Constraints)
+       =================================================================== */
+
+    const PRESETS = {
+      sample6x6: {
+        n: 6,
+        grid: [
+          [0, 0, 1, 1, 1, 2],
+          [0, 0, 1, 3, 3, 2],
+          [0, 4, 4, 3, 2, 2],
+          [4, 4, 3, 3, 2, 5],
+          [4, 4, 3, 5, 5, 5],
+          [4, 4, 5, 5, 5, 5]
+        ]
+      },
+      sample7x7: {
+        n: 7,
+        grid: [
+          [0, 0, 1, 1, 1, 2, 2],
+          [0, 3, 3, 1, 2, 2, 2],
+          [3, 3, 3, 1, 4, 4, 2],
+          [3, 5, 5, 4, 4, 4, 2],
+          [5, 5, 5, 5, 4, 6, 6],
+          [5, 5, 5, 6, 6, 6, 6],
+          [5, 5, 6, 6, 6, 6, 6]
+        ]
+      },
+      sample8x8: {
+        n: 8,
+        grid: [
+          [0, 0, 0, 1, 1, 2, 2, 2],
+          [0, 3, 0, 1, 2, 2, 4, 4],
+          [3, 3, 0, 1, 2, 4, 4, 4],
+          [3, 3, 1, 1, 5, 5, 4, 4],
+          [3, 6, 6, 6, 5, 5, 5, 4],
+          [6, 6, 7, 7, 7, 5, 5, 4],
+          [6, 7, 7, 7, 7, 7, 5, 4],
+          [6, 6, 6, 7, 7, 7, 5, 5]
+        ]
+      },
+      sample9x9: {
+        n: 9,
+        grid: [
+          [0, 0, 0, 0, 1, 1, 1, 5, 5],
+          [0, 2, 0, 3, 1, 1, 1, 5, 7],
+          [2, 2, 2, 3, 3, 4, 4, 5, 7],
+          [2, 2, 3, 3, 3, 4, 4, 5, 7],
+          [2, 3, 3, 3, 4, 4, 4, 5, 7],
+          [6, 6, 6, 3, 4, 4, 5, 5, 7],
+          [6, 6, 6, 6, 4, 4, 7, 7, 7],
+          [6, 6, 6, 6, 7, 7, 7, 7, 7],
+          [6, 6, 6, 8, 8, 8, 8, 7, 7]
+        ]
+      },
+      sample10x10: {
+        n: 10,
+        grid: [
+          [4, 0, 0, 0, 0, 0, 0, 1, 1, 1],
+          [4, 2, 2, 2, 0, 0, 3, 1, 1, 1],
+          [4, 2, 2, 2, 2, 3, 3, 3, 3, 3],
+          [4, 4, 2, 2, 3, 3, 3, 3, 3, 3],
+          [4, 4, 4, 2, 3, 3, 3, 3, 3, 5],
+          [4, 6, 6, 2, 3, 3, 3, 3, 5, 5],
+          [6, 6, 6, 6, 6, 7, 3, 5, 5, 5],
+          [6, 6, 9, 9, 7, 7, 7, 8, 8, 5],
+          [9, 9, 9, 9, 9, 7, 8, 8, 8, 8],
+          [9, 9, 9, 9, 9, 9, 9, 8, 8, 8]
+        ]
+      }
+    };
+
+    function loadPreset(presetKey) {
+      const p = PRESETS[presetKey];
+      if (!p) return;
+      document.getElementById('gridSize').value = p.n;
+      N = p.n;
+      gridRegions = JSON.parse(JSON.stringify(p.grid));
+      catPlacements = Array.from({ length: N }, () => new Array(N).fill(false));
+      updateViewfinderGridLines();
+      renderPalette();
+      renderBoard();
+      updateRegionBadge();
+      setStatus(`Loaded ${p.n}×${p.n} preset! Click "Solve Meowdoku" to find solution.`, 'info');
+    }
+
+    function showHowTo() {
+      alert(
+        "🐾 MEOWDOKU RULES & PHONE SCANNER HELP:\n\n" +
+        "GAME RULES:\n" +
+        "1. Every ROW must have exactly ONE cat 👑\n" +
+        "2. Every COLUMN must have exactly ONE cat 👑\n" +
+        "3. Every COLORED REGION must have exactly ONE cat 🎨\n" +
+        "4. NO TWO CATS CAN TOUCH: cats cannot be placed in any of the 8 surrounding boxes (orthogonal or diagonal neighbors)!\n\n" +
+        "HOW TO SCAN A PHONE SCREEN:\n" +
+        "- Point camera at your phone displaying Meowdoku.\n" +
+        "- Click 'Snap Phone Screen'.\n" +
+        "- Click 'Auto-Fit Screen' or drag the 4 corner pins with the built-in magnifying glass to frame the grid.\n" +
+        "- Click 'Extract From Corners' to automatically detect the colors.\n" +
+        "- Click 'Solve Meowdoku!' to watch the peaceful cats placed instantly!"
+      );
+    }
+
+    /* ===================================================================
+       CONFETTI CELEBRATION EFFECT
+       =================================================================== */
+
+    function triggerConfetti() {
+      const canvas = document.getElementById('confettiCanvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const particles = [];
+      const colors = ['#FF577D', '#FFC436', '#10B981', '#38BDF8', '#A855F7', '#FF758C'];
+
+      for (let i = 0; i < 90; i++) {
+        particles.push({
+          x: canvas.width / 2,
+          y: canvas.height * 0.45,
+          vx: (Math.random() - 0.5) * 15,
+          vy: (Math.random() - 0.8) * 16,
+          size: Math.random() * 8 + 4,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          rotation: Math.random() * 360,
+          rotSpeed: (Math.random() - 0.5) * 10,
+          opacity: 1
+        });
+      }
+
+      let frame = 0;
+      function anim() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        let alive = false;
+        particles.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.35;
+          p.rotation += p.rotSpeed;
+          p.opacity -= 0.012;
+
+          if (p.opacity > 0) {
+            alive = true;
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, p.opacity);
+            ctx.translate(p.x, p.y);
+            ctx.rotate((p.rotation * Math.PI) / 180);
+            ctx.fillStyle = p.color;
+            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 1.3);
+            ctx.restore();
+          }
+        });
+
+        frame++;
+        if (alive && frame < 120) {
+          requestAnimationFrame(anim);
+        } else {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+      requestAnimationFrame(anim);
+    }
+  </script>
+</body>
+</html>
