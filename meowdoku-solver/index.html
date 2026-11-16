@@ -200,6 +200,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      touch-action: none;
     }
 
     #videoFeed {
@@ -263,8 +264,8 @@
     /* Corner handles for photo alignment */
     .corner-handle {
       position: absolute;
-      width: 28px;
-      height: 28px;
+      width: 32px;
+      height: 32px;
       background: #ff3360;
       border: 3.5px solid #ffffff;
       border-radius: 50%;
@@ -273,6 +274,17 @@
       touch-action: none;
       box-shadow: 0 0 10px rgba(0,0,0,0.9), 0 0 4px #ff3360;
       z-index: 20;
+    }
+
+    /* Expand touch area around corner handle for fingers on mobile */
+    .corner-handle::after {
+      content: '';
+      position: absolute;
+      top: -14px;
+      left: -14px;
+      right: -14px;
+      bottom: -14px;
+      border-radius: 50%;
     }
 
     .corner-handle:active {
@@ -517,6 +529,7 @@
       overflow: hidden;
       background: #111;
       gap: 1px;
+      touch-action: none;
     }
 
     .cell {
@@ -671,6 +684,167 @@
       pointer-events: none;
       z-index: 9999;
     }
+
+    /* Mobile Navigation Segmented Switcher */
+    .mobile-section-nav {
+      display: none;
+      width: 100%;
+      max-width: 980px;
+      margin-bottom: 12px;
+      background: var(--card-sub);
+      padding: 4px;
+      border-radius: 12px;
+      gap: 4px;
+      border: 1px solid var(--border);
+    }
+
+    .mob-nav-btn {
+      flex: 1;
+      padding: 9px 6px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      border-radius: 9px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+      text-align: center;
+    }
+
+    .mob-nav-btn.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 8px var(--accent-glow);
+    }
+
+    /* Mobile Tool Bar (Paint Colors vs Place Cats) */
+    .mobile-tool-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 2px;
+    }
+
+    .tool-btn {
+      flex: 1;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      background: var(--card-sub);
+      color: var(--text-muted);
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+
+    .tool-btn.active {
+      background: #273044;
+      color: #fff;
+      border-color: var(--accent);
+      box-shadow: 0 0 10px rgba(255, 87, 125, 0.3);
+    }
+
+    @media (max-width: 859px) {
+      .mobile-section-nav {
+        display: flex;
+      }
+      .card.mobile-hidden {
+        display: none !important;
+      }
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 8px;
+        padding-bottom: calc(24px + env(safe-area-inset-bottom));
+      }
+
+      header {
+        padding: 10px 12px;
+        margin-bottom: 8px;
+      }
+
+      .logo-cat {
+        font-size: 1.8rem;
+      }
+
+      h1 {
+        font-size: 1.15rem;
+      }
+
+      .tagline {
+        font-size: 0.68rem;
+      }
+
+      .rules-banner {
+        font-size: 0.74rem;
+        gap: 6px 10px;
+        padding: 8px 10px;
+        margin-bottom: 10px;
+      }
+
+      .card {
+        padding: 12px;
+        gap: 10px;
+      }
+
+      .card-title {
+        font-size: 0.95rem;
+      }
+
+      .input-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 3px;
+        gap: 4px;
+      }
+
+      .tab-btn {
+        padding: 7px 8px;
+        font-size: 0.76rem;
+        white-space: nowrap;
+      }
+
+      .btn {
+        padding: 9px 12px;
+        font-size: 0.82rem;
+      }
+
+      .color-swatch {
+        width: 38px;
+        height: 38px;
+        font-size: 0.85rem;
+        border-radius: 9px;
+      }
+
+      .palette-colors {
+        padding: 8px;
+        gap: 8px;
+        justify-content: center;
+      }
+
+      .board-wrapper {
+        border-width: 2.5px;
+        padding: 4px;
+        border-radius: 12px;
+      }
+
+      .btn-solve {
+        font-size: 0.98rem;
+        padding: 12px 18px;
+      }
+
+      .status-badge {
+        font-size: 0.8rem;
+        padding: 10px 12px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -699,11 +873,18 @@
     <span>🚫 <span class="rule-highlight">No two cats can touch</span> (all 8 surrounding boxes forbidden)</span>
   </div>
 
+  <!-- Mobile Section Switcher -->
+  <div class="mobile-section-nav" id="mobileNav">
+    <button class="mob-nav-btn active" id="mobBtnCam" onclick="switchMobileSection('cam')">📸 Step 1: Scan</button>
+    <button class="mob-nav-btn" id="mobBtnBoard" onclick="switchMobileSection('board')">🐾 Step 2: Board & Solve</button>
+    <button class="mob-nav-btn" id="mobBtnBoth" onclick="switchMobileSection('both')">👁 Both</button>
+  </div>
+
   <!-- Main Container -->
   <div class="main-container">
 
     <!-- Left Column: Phone Screen Camera, Direct Capture & Alignment -->
-    <div class="card">
+    <div class="card" id="cardCamera">
       <div class="card-title">
         <span>📸 Phone Screen Scanner</span>
         <span style="font-size: 0.78rem; color: var(--text-muted);">Step 1: Capture Phone</span>
@@ -711,14 +892,14 @@
 
       <!-- Mode selection tabs -->
       <div class="input-tabs">
-        <button class="tab-btn active" id="tabCam" onclick="switchInputMode('camera')">📷 Point Camera at Phone</button>
+        <button class="tab-btn active" id="tabPresets" onclick="switchInputMode('presets')">🧩 Presets</button>
+        <button class="tab-btn" id="tabCam" onclick="switchInputMode('camera')">📷 Camera Scan</button>
         <button class="tab-btn" id="tabDirectScreen" onclick="captureDirectScreen()">📱 Screen Share</button>
         <button class="tab-btn" id="tabUpload" onclick="switchInputMode('upload')">📁 Screenshot / Paste</button>
-        <button class="tab-btn" id="tabPresets" onclick="switchInputMode('presets')">🧩 Presets</button>
       </div>
 
-      <!-- Camera Feed & Captured Frame Display -->
-      <div id="camSection">
+      <!-- Camera Feed & Captured Frame Display (Only activated when user clicks Camera Scan) -->
+      <div id="camSection" style="display: none;">
         <div class="cam-wrapper" id="camWrapper">
           <video id="videoFeed" autoplay playsinline muted></video>
           <canvas id="scannerCanvas" style="display: none;"></canvas>
@@ -764,8 +945,8 @@
         </div>
       </div>
 
-      <!-- Sample Presets Section -->
-      <div id="presetsSection" style="display: none;">
+      <!-- Sample Presets Section (Default View) -->
+      <div id="presetsSection" style="display: block;">
         <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">Try instant pre-built verified Meowdoku puzzles:</div>
         <div class="presets-row">
           <button class="chip-btn" onclick="loadPreset('sample6x6')">🌸 6×6 Pastel Meadow</button>
@@ -788,10 +969,16 @@
     </div>
 
     <!-- Right Column: Interactive Grid, Color Palette & Pure JS Solver -->
-    <div class="card">
+    <div class="card" id="cardBoard">
       <div class="card-title">
         <span>🐾 Puzzle Board & Solution</span>
         <span style="font-size: 0.78rem; color: var(--text-muted);">Step 2: Solve</span>
+      </div>
+
+      <!-- Touch Tool Switcher (Especially convenient on phones) -->
+      <div class="mobile-tool-bar">
+        <button class="tool-btn active" id="toolPaint" onclick="setTouchTool('paint')">🎨 Paint Colors</button>
+        <button class="tool-btn" id="toolCat" onclick="setTouchTool('cat')">👑 Place / Toggle Cats</button>
       </div>
 
       <!-- Board Size & Actions -->
@@ -959,7 +1146,8 @@
     let gridRegions = [];
     let catPlacements = [];
     let activePaletteColor = 0;
-    let activeInputMode = 'camera';
+    let activeInputMode = 'presets'; // Default to presets!
+    let currentTouchTool = 'paint'; // 'paint' or 'cat'
     let isPainting = false;
 
     // Camera and Corner Adjustment State
@@ -983,11 +1171,50 @@
     window.addEventListener('DOMContentLoaded', () => {
       initGrid(8);
       loadPreset('sample8x8');
-      setupCamera();
       setupPasteAndDrop();
       setupCornerHandles();
       updateViewfinderGridLines();
+      // Camera is NOT requested on startup; only when user clicks Camera Scan!
     });
+
+    function setTouchTool(tool) {
+      currentTouchTool = tool;
+      const btnPaint = document.getElementById('toolPaint');
+      const btnCat = document.getElementById('toolCat');
+      if (btnPaint) btnPaint.classList.toggle('active', tool === 'paint');
+      if (btnCat) btnCat.classList.toggle('active', tool === 'cat');
+      if (tool === 'paint') {
+        setStatus(`Paint mode active. Tap or drag across cells to color with Region ${activePaletteColor + 1}.`, 'info');
+      } else {
+        setStatus(`Place Cat mode active. Tap any cell on the board to place or remove a cat.`, 'info');
+      }
+    }
+
+    function switchMobileSection(section) {
+      const cardCam = document.getElementById('cardCamera');
+      const cardBoard = document.getElementById('cardBoard');
+      const btnCam = document.getElementById('mobBtnCam');
+      const btnBoard = document.getElementById('mobBtnBoard');
+      const btnBoth = document.getElementById('mobBtnBoth');
+
+      if (btnCam) btnCam.classList.toggle('active', section === 'cam');
+      if (btnBoard) btnBoard.classList.toggle('active', section === 'board');
+      if (btnBoth) btnBoth.classList.toggle('active', section === 'both');
+
+      if (section === 'cam') {
+        if (cardCam) cardCam.classList.remove('mobile-hidden');
+        if (cardBoard) cardBoard.classList.add('mobile-hidden');
+      } else if (section === 'board') {
+        if (cardCam) cardCam.classList.add('mobile-hidden');
+        if (cardBoard) {
+          cardBoard.classList.remove('mobile-hidden');
+          cardBoard.scrollIntoView({ behavior: 'smooth' });
+        }
+      } else {
+        if (cardCam) cardCam.classList.remove('mobile-hidden');
+        if (cardBoard) cardBoard.classList.remove('mobile-hidden');
+      }
+    }
 
     function setStatus(message, type = 'info') {
       const badge = document.getElementById('statusBadge');
@@ -1117,24 +1344,34 @@
             playMeowSound(false);
           };
 
-          // Mouse / Touch Painting interactions
+          // Tap / click handler for desktop and touchscreens
+          cell.onclick = (e) => {
+            if (currentTouchTool === 'cat') {
+              toggleCat(r, c);
+            } else {
+              paintCell(r, c);
+            }
+          };
+
+          // Mouse right-click still toggles cat for desktop users
+          cell.oncontextmenu = (e) => {
+            e.preventDefault();
+            toggleCat(r, c);
+          };
+
+          // Mouse hover painting while mouse button is held down
           cell.onmousedown = (e) => {
-            if (e.button === 0) { // left click: paint color
+            if (e.button === 0 && currentTouchTool === 'paint') {
               isPainting = true;
               paintCell(r, c);
-            } else if (e.button === 2) { // right click: toggle cat
+            } else if (e.button === 2) {
               e.preventDefault();
               toggleCat(r, c);
             }
           };
 
           cell.onmouseenter = () => {
-            if (isPainting) paintCell(r, c);
-          };
-
-          cell.oncontextmenu = (e) => {
-            e.preventDefault();
-            toggleCat(r, c);
+            if (isPainting && currentTouchTool === 'paint') paintCell(r, c);
           };
 
           board.appendChild(cell);
@@ -1142,6 +1379,38 @@
       }
 
       window.onmouseup = () => { isPainting = false; };
+
+      // Touch drag-to-paint on mobile touchscreens
+      let lastTouchCell = null;
+      board.ontouchstart = (e) => {
+        if (currentTouchTool !== 'paint') return;
+        if (e.touches.length === 1) {
+          const touch = e.touches[0];
+          const target = document.elementFromPoint(touch.clientX, touch.clientY);
+          const cell = target ? target.closest('.cell') : null;
+          if (cell) {
+            lastTouchCell = cell;
+            paintCell(parseInt(cell.dataset.row), parseInt(cell.dataset.col));
+          }
+        }
+      };
+
+      board.ontouchmove = (e) => {
+        if (currentTouchTool !== 'paint') return;
+        if (e.touches.length === 1) {
+          e.preventDefault(); // Prevents jittery page scroll while coloring cells
+          const touch = e.touches[0];
+          const target = document.elementFromPoint(touch.clientX, touch.clientY);
+          const cell = target ? target.closest('.cell') : null;
+          if (cell && cell !== lastTouchCell) {
+            lastTouchCell = cell;
+            paintCell(parseInt(cell.dataset.row), parseInt(cell.dataset.col));
+          }
+        }
+      };
+
+      board.ontouchend = () => { lastTouchCell = null; };
+      board.ontouchcancel = () => { lastTouchCell = null; };
     }
 
     function paintCell(r, c) {
@@ -1774,6 +2043,9 @@
       updateRegionBadge();
       playMeowSound(true);
       setStatus(`Captured phone screen into ${N} color regions! Tap any cell if you want to touch up, then hit Solve!`, 'ready');
+      if (window.innerWidth < 860) {
+        switchMobileSection('board');
+      }
     }
 
     function colorDistSq(c1, c2) {
@@ -1862,14 +2134,15 @@
       document.getElementById('tabUpload').classList.toggle('active', mode === 'upload');
       document.getElementById('tabPresets').classList.toggle('active', mode === 'presets');
 
-      document.getElementById('camSection').style.display = (mode === 'camera' || mode === 'upload') ? 'block' : 'none';
+      document.getElementById('camSection').style.display = (mode === 'camera') ? 'block' : 'none';
       document.getElementById('uploadSection').style.display = (mode === 'upload') ? 'block' : 'none';
       document.getElementById('presetsSection').style.display = (mode === 'presets') ? 'block' : 'none';
 
       if (mode === 'camera') {
         retakePhoto();
-        setupCamera();
-      } else if (mode === 'presets') {
+        setupCamera(); // Only ask for camera permission when user selects Camera Scan!
+      } else {
+        // Stop any active camera stream when switching to Presets or Upload
         if (videoStream) {
           videoStream.getTracks().forEach(t => t.stop());
           videoStream = null;
@@ -2020,6 +2293,9 @@
       renderBoard();
       updateRegionBadge();
       setStatus(`Loaded ${p.n}×${p.n} preset! Click "Solve Meowdoku" to find solution.`, 'info');
+      if (window.innerWidth < 860) {
+        switchMobileSection('board');
+      }
     }
 
     function showHowTo() {
